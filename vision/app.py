@@ -38,6 +38,7 @@ from starlette.background import BackgroundTask
 
 import flossy_vision as fv
 from coach import GuidedSession, ZoneModel
+from gestures import GestureTracker, middle_finger
 from protocol import PROTOCOLS
 from recorder import Recorder, geometry
 
@@ -176,6 +177,7 @@ class Stream:
         self.last_ts = -1
         self.coach = None
         self.recorder = None
+        self.gestures = GestureTracker()
 
     def process(self, jpeg: bytes):
         frame = cv2.imdecode(np.frombuffer(jpeg, np.uint8), cv2.IMREAD_COLOR)
@@ -191,6 +193,8 @@ class Stream:
         else:
             mouth, hands, brushes, raw = fv.detect(frame, ts, self.lms, None)
         state, zone, feats = self.clf.update(mouth, hands, brushes)
+        # La peineta: la app contesta con humor (Session.jsx). No cuenta para nada.
+        gesture = "middle_finger" if self.gestures.update(ts / 1000, middle_finger(hands, mouth, (w, h))) else None
         coach = self.coach.update(ts / 1000, state, raw, (w, h)) if self.coach else None
         guide = self.record(ts / 1000, jpeg, w, h, state, zone, feats, raw, mouth, hands, brushes) if self.recorder else None
         norm = np.array([w, h])
@@ -198,6 +202,7 @@ class Stream:
             "state": state,
             "coach": coach,
             "guide": guide,
+            "gesture": gesture,
             "face": mouth is not None,
             "infer_ms": round((time.perf_counter() - t) * 1000),
             "mouth": None if mouth is None else {

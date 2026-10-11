@@ -71,3 +71,12 @@ pre.snippet{font:12px ui-monospace,monospace;white-space:pre-wrap;word-break:bre
 .sharecode .copy{border:0;background:var(--acc-soft);color:var(--acc);width:40px;height:40px;
   border-radius:12px;display:grid;place-items:center;font-size:20px;cursor:pointer}
 .sharecode .copy:active{opacity:.6}
+
+/* respuesta a la peineta (Session.jsx) */
+.stage .gesture{position:absolute;left:50%;top:38%;transform:translate(-50%,-50%);z-index:3;display:flex;
+  flex-direction:column;align-items:center;gap:6px;padding:14px 18px;border-radius:var(--r);max-width:80%;
+  text-align:center;font-size:17px;font-weight:600;background:rgba(0,0,0,.72);backdrop-filter:blur(10px);
+  animation:gesture-pop 2.5s var(--ease) both}
+.stage .gesture span{font-size:64px;line-height:1}
+@keyframes gesture-pop{0%{opacity:0;transform:translate(-50%,-50%) scale(.6)}12%{opacity:1;transform:translate(-50%,-50%) scale(1.06)}
+  20%{transform:translate(-50%,-50%) scale(1)}82%{opacity:1}100%{opacity:0}}

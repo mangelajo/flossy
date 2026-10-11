@@ -4,7 +4,8 @@
 
 Web app para el móvil que guía el cepillado y la seda dental con la cámara: te pide cada zona
 (arriba/abajo × izquierda/centro/derecha) y su barra solo sube mientras el sistema confirma que
-estás en ella. Cada persona de la casa tiene su perfil e historial.
+estás en ella. Cada persona de la casa tiene su perfil e historial. Y si alguien le hace una
+peineta a la cámara a mitad de sesión, la app le contesta con guasa 😄.
 
 <table>
   <tr>

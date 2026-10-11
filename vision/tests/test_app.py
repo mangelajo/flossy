@@ -73,6 +73,7 @@ def test_sesion_guiada_responde_a_cada_fotograma(people):
     assert r["state"] == "idle" and r["face"] is False          # imagen gris: no hay nadie
     assert r["coach"]["steps"] == 6 and r["coach"]["status"] == "idle"
     assert r["guide"] is None
+    assert r["gesture"] is None                                 # nadie haciendo la peineta
 
 
 def test_un_fotograma_roto_no_tumba_la_conexion(people):

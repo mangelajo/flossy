@@ -5,6 +5,7 @@
 A mobile web app that guides tooth brushing and flossing with the phone camera. It asks for each
 zone in turn (upper/lower × left/center/right), and a zone's bar only fills while the system
 confirms you are actually working on it. Everyone at home gets their own profile and history.
+And if someone flips the camera off mid-session, the app answers back with a joke 😄.
 
 The app's interface is in Spanish for now; menu names below are given in Spanish with a translation.
 

@@ -13,6 +13,14 @@ import { Button } from '../components/ui.jsx'
 export const ZONES = [['sup-izq', '↖ izq'], ['sup-front', '↑'], ['sup-der', '↗ der'],
                       ['inf-izq', '↙ izq'], ['inf-front', '↓'], ['inf-der', '↘ der']]
 const PER_ZONE = { brush: BRUSH_GOAL / 6, floss: FLOSS_GOAL / 6 }
+// Respuestas cuando el servidor ve la peineta (vision/gestures.py). Solo humor: no cuenta para nada.
+const COMEBACKS = [
+  ['😏', '¡Te he visto! Ese dedo no limpia los dientes'],
+  ['🙄', 'Muy gracioso… ahora, a cepillar'],
+  ['📝', 'Anotado. Sigue, que vas bien'],
+  ['🦷', 'Eso no cuenta como seda dental'],
+  ['😂', 'Tus dientes no se van a ofender, pero sigue cepillando']
+]
 const MODE_TITLE = { both: 'Cepillado + seda', brush: 'Cepillado', floss: 'Seda dental' }
 
 export function ZoneGrid({ kind, progress, coach }) {
@@ -51,6 +59,7 @@ export default function Session() {
   const [coach, setCoach] = useState(null)
   const [state, setState] = useState('idle')
   const [face, setFace] = useState(true)
+  const [joke, setJoke] = useState(null)
   const [error, setError] = useState('')
   const canvasRef = useRef(null)
   const rt = useRef({}).current  // estado del bucle de fotogramas (fuera de React)
@@ -93,6 +102,14 @@ export default function Session() {
       },
       onMessage: msg => {
         setState(msg.state); setFace(msg.face)
+        if (msg.gesture) {
+          const [emoji, text] = COMEBACKS[Math.floor(Math.random() * COMEBACKS.length)]
+          setJoke({ emoji, text, key: Date.now() })
+          clearTimeout(rt.jokeTimer)
+          rt.jokeTimer = setTimeout(() => setJoke(null), 2500)
+          // say() corta lo que estuviera diciendo: se repite la instrucción de la zona detrás.
+          say(rt.coach && !rt.coach.done ? `${text}. ${rt.coach.text}` : text)
+        }
         const c = msg.coach
         if (!c) return
         rt.coach = c
@@ -127,6 +144,7 @@ export default function Session() {
         {phase === 'running' && <div className={`badge ${state}`}>
           {!face ? 'No te veo la cara' : { brush: 'Cepillando', floss: 'Seda dental', idle: 'Esperando…' }[state]}
         </div>}
+        {phase === 'running' && joke && <div className="gesture" key={joke.key}><span>{joke.emoji}</span>{joke.text}</div>}
         {phase === 'running' && coach && <div className="guide">
           <div className="count">{coach.done ? '✓' : Math.ceil((1 - coach.progress[coach.activity][coach.zone]) * PER_ZONE[coach.activity])}</div>
           <div className="step">{coach.done ? 'Completado' : `Zona ${coach.step + 1} de ${coach.steps}`}</div>
