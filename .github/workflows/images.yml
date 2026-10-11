@@ -72,6 +72,22 @@ jobs:
             type=semver,pattern={{version}}
             type=ref,event=pr
 
+      # Prueba de humo: arranca MediaPipe dentro de la imagen (amd64) antes de publicar. Las
+      # bibliotecas nativas que falten (libEGL, libGLES…) solo fallan al crear los landmarkers.
+      - name: Smoke test (vision)
+        if: matrix.name == 'vision'
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          platforms: linux/amd64
+          load: true
+          tags: flossy-vision:smoke
+          cache-from: type=gha,scope=${{ matrix.name }}
+      - name: Run smoke test (vision)
+        if: matrix.name == 'vision'
+        run: docker run --rm flossy-vision:smoke python -c "import flossy_vision as fv, coach; fv.Landmarkers(); assert coach.ZoneModel().ready; print('ok')"
+
       - uses: docker/build-push-action@v6
         with:
           context: ${{ matrix.context }}

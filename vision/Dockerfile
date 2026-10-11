@@ -3,7 +3,7 @@
 # Capas de lo que menos cambia a lo que más: modelos de MediaPipe, dependencias, clasificador
 # de zonas (cambia al reentrenar) y por último el código.
 FROM python:3.12-slim
-RUN apt-get update && apt-get install -y --no-install-recommends libgl1 libglib2.0-0 wget \
+RUN apt-get update && apt-get install -y --no-install-recommends libgl1 libegl1 libgles2 libglib2.0-0 wget \
  && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 # Modelos versionados con git LFS en vision/models/. Se puede montar otro zones.joblib en
