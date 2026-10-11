@@ -19,10 +19,8 @@ services:
     env_file: .env
     environment:
       - DATA_DIR=/data
-      - FLOSSY_MODELS=/models
     volumes:
       - ./data:/data:ro           # solo para verificar la cookie de sesión
-      - ./vision/models:/models:ro  # zones.joblib (reentrénalo con `uv run zones.py`)
     # Cada sesión activa usa ~1 núcleo a ~10 fps. Ajusta según tu máquina.
     deploy:
       resources:

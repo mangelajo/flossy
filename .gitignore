@@ -1,4 +1,3 @@
-vision/models/
 *.pt
 .venv/
 __pycache__/

@@ -1,6 +1,5 @@
 .venv
 data
-models
 static
 __pycache__
 *.pt

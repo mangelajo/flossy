@@ -1,0 +1,2 @@
+vision/models/*.joblib filter=lfs diff=lfs merge=lfs -text
+vision/models/*.task filter=lfs diff=lfs merge=lfs -text

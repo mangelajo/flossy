@@ -8,13 +8,10 @@ WORKDIR /app
 COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev --no-install-project
 COPY flossy_vision.py coach.py zones.py app.py ./
-# Modelos de MediaPipe dentro de la imagen; el de zonas (zones.joblib) llega por volumen en
-# /models, para poder reentrenarlo sin reconstruir.
-ENV FLOSSY_MEDIAPIPE=/app/mp-models
-RUN mkdir -p /app/mp-models \
- && wget -q -O /app/mp-models/hand_landmarker.task https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/latest/hand_landmarker.task \
- && wget -q -O /app/mp-models/face_landmarker.task https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/latest/face_landmarker.task
-ENV FLOSSY_MODELS=/models DATA_DIR=/data PATH="/app/.venv/bin:$PATH"
+# Modelos (MediaPipe + clasificador de zonas) versionados con git LFS en vision/models/.
+# Se puede montar otro zones.joblib en /app/models para probarlo sin reconstruir.
+COPY models/*.task models/*.joblib ./models/
+ENV FLOSSY_MODELS=/app/models DATA_DIR=/data PATH="/app/.venv/bin:$PATH"
 EXPOSE 8000
 HEALTHCHECK --interval=5m --timeout=5s CMD wget --spider -q "http://127.0.0.1:8000/ws/health" || exit 1
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers"]

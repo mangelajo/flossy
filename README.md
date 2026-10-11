@@ -72,8 +72,6 @@ laboratorio.
 
 ```bash
 cp .env.example .env              # ajusta RP_ID y ORIGIN a tu dominio HTTPS
-# El clasificador de zonas no está en git: entrénalo (o copia vision/models/zones.joblib)
-cd vision && uv run zones.py && cd ..
 docker compose up -d --build      # http://localhost:8080 (o tu dominio)
 ```
 
@@ -95,7 +93,9 @@ uv run analyze.py [id] [--replay] # resumen por zona de las grabaciones (data/re
 uv run zones.py                   # evalúa y reentrena el clasificador -> models/zones.joblib
 ```
 
-La app recarga `zones.joblib` sola al empezar la siguiente sesión.
+Los modelos (`vision/models/*.task`, `zones.joblib`) van en git LFS y dentro de la imagen de
+visión: tras reentrenar, haz commit de `zones.joblib` y CI publica una imagen nueva. En local, la
+app recarga `zones.joblib` sola al empezar la siguiente sesión.
 
 ## Licencia
 
