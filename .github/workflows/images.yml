@@ -1,4 +1,4 @@
-# Construye las tres imágenes y las publica en ghcr.io/<owner>/flossy-{api,vision,web}.
+# Construye las tres imágenes (amd64 + arm64) y las publica en ghcr.io/<owner>/flossy-{api,vision,web}.
 # En PRs solo se construyen (sin publicar). En main: :latest y :sha-<corto>; en tags vX.Y.Z: :X.Y.Z.
 name: images
 
@@ -50,6 +50,9 @@ jobs:
         if: matrix.name == 'vision'
         run: git lfs pull
 
+      # arm64 por emulación: solo se instalan wheels ya compilados, así que es rápido.
+      - uses: docker/setup-qemu-action@v3
+
       - uses: docker/setup-buildx-action@v3
 
       - uses: docker/login-action@v3
@@ -73,7 +76,7 @@ jobs:
         with:
           context: ${{ matrix.context }}
           file: ${{ matrix.dockerfile }}
-          platforms: linux/amd64
+          platforms: linux/amd64,linux/arm64
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
