@@ -12,7 +12,7 @@ import { ZoneGrid } from './Session.jsx'
 function SessionSheet({ s, close, onDelete }) {
   return <>
     <h3>{fmtWhen(s.started)}</h3>
-    <div className="muted small" style={{ marginBottom: 12 }}>{s.completed ? 'Completa' : 'Incompleta'}</div>
+    <div className="muted small" style={{ marginBottom: 12 }}>{s.manual ? 'Marcada a mano' : s.completed ? 'Completa' : 'Incompleta'}</div>
     {s.mode !== 'floss' && <><div className="small">Cepillado: {fmtTime(s.brush_s)}</div><ZoneGrid kind="brush" progress={s.brush_zones} /><div style={{ height: 12 }} /></>}
     {s.mode !== 'brush' && <><div className="small">Seda: {fmtTime(s.floss_s)}</div><ZoneGrid kind="floss" progress={s.floss_zones} /><div style={{ height: 12 }} /></>}
     {onDelete && <Button variant="danger" icon="trash" onClick={async () => { await onDelete(s); close() }}>Borrar sesión</Button>}
@@ -38,6 +38,7 @@ export function PersonHistory({ uid, sessions, onDelete }) {
               {s.mode !== 'floss' && <>Cepillo {fmtTime(s.brush_s)}{brushed(s) ? ' ✓' : ''}</>}
               {s.mode === 'both' && ' · '}
               {s.mode !== 'brush' && <>Seda {fmtTime(s.floss_s)}{flossed(s) ? ' ✓' : ''}</>}
+              {s.manual && ' · marcada a mano'}
             </div>
           </div>
           <Icon name="chevronRight" className="dim" />

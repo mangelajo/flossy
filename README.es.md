@@ -47,7 +47,9 @@ móvil ──HTTPS──▶ nginx ──/api──▶ api (Node)     ── data
 - **Familia**: un tutor crea el perfil de un niño (nombre + contraseña) o se vincula a uno
   existente con un código de un solo uso (15 min) que genera el niño o el otro tutor; el código se
   puede copiar o compartir como enlace. Los tutores
-  ven el estado y el historial del niño y gestionan su horario; el niño ya no puede cambiarlo.
+  ven el estado y el historial del niño y gestionan su horario; el niño ya no puede cambiarlo. Los
+  tutores también pueden marcar a mano como hecha una sesión de hoy (si se cepilló sin la app), y
+  deshacerlo.
 - **API de solo lectura** para domótica: claves creadas en Ajustes → Claves de API. Una clave
   ve a su dueño y a los niños de los que es tutor.
 

@@ -10,7 +10,9 @@ const STATUS = {
   missed: ['xmark', 'var(--red)', 'No hecha']
 }
 
-export function SlotList({ slots, onStart }) {
+// onStart: botón «Empezar» en la franja de ahora. onMark/onUnmark: marcar a mano como hecha una
+// franja de ahora o ya pasada (tutores), y deshacerlo si fue a mano.
+export function SlotList({ slots, onStart, onMark, onUnmark }) {
   if (!slots?.length) return <div className="card small muted">Hoy no hay sesiones programadas.</div>
   return (
     <div className="sect-b">
@@ -25,7 +27,11 @@ export function SlotList({ slots, onStart }) {
             </span>
             {onStart && s.status === 'open'
               ? <button className="btn primary sm" onClick={() => onStart(s)}>Empezar</button>
-              : <span className="lrow-v" style={{ color }}>{label}</span>}
+              : onMark && (s.status === 'open' || s.status === 'missed')
+                ? <button className="btn tinted sm" onClick={() => onMark(s)}>Marcar hecha</button>
+                : s.manual && onUnmark
+                  ? <button className="btn plain sm" onClick={() => onUnmark(s)} title="Deshacer">A mano · deshacer</button>
+                  : <span className="lrow-v" style={{ color }}>{s.manual ? 'A mano' : label}</span>}
           </div>
         )
       })}

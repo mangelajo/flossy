@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../store/useAuth.js'
 import { useUI, toast } from '../store/useUI.js'
-import { getFamily, createChild, familyCode, redeemFamilyCode, unlinkChild, getStatus, userSessions } from '../lib/api.js'
+import { getFamily, createChild, familyCode, redeemFamilyCode, unlinkChild, getStatus, userSessions, markSlot, unmarkSlot } from '../lib/api.js'
 import Icon from '../components/Icon.jsx'
 import { Button, Section, Row, Segmented } from '../components/ui.jsx'
 import { SlotList } from '../components/Slots.jsx'
@@ -116,10 +116,18 @@ export function FamilyChild() {
   const nav = useNavigate()
   const [status, setStatus] = useState(null)
   const [sessions, setSessions] = useState(null)
+  const loadSessions = () => userSessions(id).then(setSessions).catch(() => {})
   useEffect(() => {
     getStatus(id).then(setStatus).catch(e => toast(e.message))
-    userSessions(id).then(setSessions).catch(() => {})
+    loadSessions()
   }, [id])
+  const mark = async (s, on) => {
+    try {
+      setStatus(await (on ? markSlot : unmarkSlot)(id, s.id))
+      loadSessions()
+      toast(on ? `${s.name}: marcada como hecha` : `${s.name}: desmarcada`)
+    } catch (e) { toast(e.message) }
+  }
   const share = () => useUI.getState().openSheet(() => <CodeSheet child={id} title={`Compartir a ${status?.name}`} />)
   const unlink = async () => {
     try { await unlinkChild(id); toast('Ya no eres su tutor'); nav('/family') } catch (e) { toast(e.message) }
@@ -131,7 +139,10 @@ export function FamilyChild() {
         <div><h1>{status.name}</h1><div className="sub">Racha: {status.streak} {status.streak === 1 ? 'día' : 'días'}</div></div>
         <Button size="sm" variant="tinted" icon="chevronLeft" onClick={() => nav('/family')}>Familia</Button>
       </div>
-      <section className="sect"><h2 className="sect-t">Hoy</h2><SlotList slots={status.slots} /></section>
+      <section className="sect"><h2 className="sect-t">Hoy</h2>
+        <SlotList slots={status.slots} {...(status.can_mark && { onMark: s => mark(s, true), onUnmark: s => mark(s, false) })} />
+        {status.can_mark && <p className="sect-f">Si se ha cepillado sin la app, márcala como hecha.</p>}
+      </section>
       <Section>
         <Row icon="clock" title="Horario" subtitle="Cuándo tiene que cepillarse" accessory="chevron" onClick={() => nav('/schedule/' + id)} />
         <Row icon="person" title="Añadir otro tutor" subtitle="Genera un código para el padre, la madre…" accessory="chevron" onClick={share} />

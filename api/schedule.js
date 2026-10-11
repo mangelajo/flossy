@@ -52,6 +52,17 @@ export function localParts(date, tz) {
   return { date: `${parts.year}-${parts.month}-${parts.day}`, minutes: +parts.hour * 60 + +parts.minute, weekday };
 }
 
+/** Instante (Date) de una fecha y hora locales en una zona horaria. */
+export function zonedTime(isoDate, hhmm, tz) {
+  const want = Date.parse(`${isoDate}T${hhmm}:00Z`);
+  let t = want;
+  for (let i = 0; i < 2; i++) {  // dos pasadas bastan también en los cambios de hora
+    const p = localParts(new Date(t), tz);
+    t += want - Date.parse(`${p.date}T${String(Math.floor(p.minutes / 60)).padStart(2, '0')}:${String(p.minutes % 60).padStart(2, '0')}:00Z`);
+  }
+  return new Date(t);
+}
+
 const weekdayOf = isoDate => (new Date(isoDate + 'T12:00:00Z').getUTCDay() + 6) % 7;
 export function addDays(isoDate, n) {
   const d = new Date(isoDate + 'T12:00:00Z');
@@ -98,7 +109,7 @@ export function slotsForDay(schedule, byDate, isoDate, today, since = null) {
     else if (isoDate > today.date || today.minutes < a) status = 'upcoming';
     else if (today.minutes <= b) status = 'open';
     else status = 'missed';
-    return { ...slot, status, session: hit ? hit.s.id : null };
+    return { ...slot, status, session: hit ? hit.s.id : null, manual: !!hit?.s.manual };
   });
 }
 
@@ -133,7 +144,7 @@ export function personStatus(user, sessions, { days = 0, now = new Date() } = {}
     id: user.id, name: user.name, tz, date: today.date,
     ok: count('missed') === 0,           // ninguna franja de hoy se ha quedado sin hacer
     open_now: count('open'), missed_today: count('missed'), done_today: count('done'), total_today: slots.length,
-    slots: slots.map(({ id, name, start, end, mode, status }) => ({ id, name, start, end, mode, status })),
+    slots: slots.map(({ id, name, start, end, mode, status, session, manual }) => ({ id, name, start, end, mode, status, session, manual })),
     streak,
     ...(days ? { days: summary } : {})
   };

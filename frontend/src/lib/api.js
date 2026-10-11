@@ -85,6 +85,8 @@ export const patchMe = async body => (await api('/api/me', { method: 'PATCH', bo
 export const getStatus = async (id, days = 0) => (await api(`/api/users/${enc(id)}/status?days=${days}`)).status
 export const getSchedule = id => api(`/api/users/${enc(id)}/schedule`)
 export const putSchedule = async (id, schedule) => (await put(`/api/users/${enc(id)}/schedule`, { schedule })).schedule
+export const markSlot = async (id, slot) => (await post(`/api/users/${enc(id)}/slots/${enc(slot)}/done`)).status
+export const unmarkSlot = async (id, slot) => (await api(`/api/users/${enc(id)}/slots/${enc(slot)}/done`, { method: 'DELETE' })).status
 export const userSessions = async id => (await api(`/api/users/${enc(id)}/sessions`)).sessions
 
 // Familia

@@ -17,7 +17,7 @@ import { verifyError } from './verify-error.js';
 import { hashPassword, verifyPassword, needsRehash, passwordProblem, passwordLength, nameKey, BusyError, MIN_LENGTH, MAX_LENGTH } from './password.js';
 import { createBackoff, createWindow } from './rate-limit.js';
 import { atomicWrite } from './durable.js';
-import { cleanSchedule, personStatus, validTz, DEFAULT_SCHEDULE } from './schedule.js';
+import { cleanSchedule, personStatus, validTz, zonedTime, DEFAULT_SCHEDULE, BRUSH_GOAL, FLOSS_GOAL } from './schedule.js';
 
 const flag = (v, dflt) => (v === undefined || v === '' ? dflt : /^(1|true|yes|on)$/i.test(v));
 const PORT = +(process.env.PORT || 3000);
@@ -436,7 +436,44 @@ const routes = {
     const target = viewable(req, res, id);
     if (!target) return;
     const days = Math.min(Math.max(+(req.query.get('days') || 0) || 0, 0), 120);
-    json(res, 200, { status: personStatus(target, readSessions(target.id), { days }) });
+    // can_mark: quien puede marcar a mano sus sesiones (mismo permiso que cambiar su horario).
+    json(res, 200, { status: { ...personStatus(target, readSessions(target.id), { days }), can_mark: canEditSchedule(readSession(req), target) } });
+  },
+
+  // Marcar a mano como hecha una franja de hoy (p. ej. un tutor, si se cepilló sin la app): se
+  // guarda una sesión que la cumple, con manual y quién la marcó.
+  'POST /api/users/{id}/slots/{slot}/done': async (req, res, id, slotId) => {
+    const target = viewable(req, res, id);
+    if (!target) return;
+    const viewer = readSession(req);
+    if (!canEditSchedule(viewer, target)) return json(res, 403, { error: 'solo sus tutores pueden marcar sus sesiones' });
+    const list = readSessions(target.id);
+    const st = personStatus(target, list);
+    const slot = st.slots.find(s => s.id === slotId);
+    if (!slot) return json(res, 404, { error: 'esa sesión no toca hoy' });
+    if (slot.status === 'upcoming') return json(res, 400, { error: 'esa sesión todavía no ha empezado' });
+    if (slot.status !== 'done') {
+      const started = slot.status === 'open' ? new Date() : zonedTime(st.date, slot.start, st.tz);
+      const zeros = Object.fromEntries(ZONES.map(z => [z, 0]));
+      list.push({ id: crypto.randomBytes(9).toString('base64url'), started: started.toISOString(), ended: started.toISOString(),
+                  mode: slot.mode, brush_s: slot.mode === 'floss' ? 0 : BRUSH_GOAL, floss_s: slot.mode === 'brush' ? 0 : FLOSS_GOAL,
+                  brush_zones: zeros, floss_zones: zeros, completed: true, manual: true, by: viewer.id });
+      list.sort((a, b) => a.started.localeCompare(b.started));
+      writeSessions(target.id, list.slice(-5000));
+    }
+    json(res, 200, { status: { ...personStatus(target, list), can_mark: true } });
+  },
+
+  'DELETE /api/users/{id}/slots/{slot}/done': async (req, res, id, slotId) => {
+    const target = viewable(req, res, id);
+    if (!target) return;
+    if (!canEditSchedule(readSession(req), target)) return json(res, 403, { error: 'solo sus tutores pueden marcar sus sesiones' });
+    let list = readSessions(target.id);
+    const slot = personStatus(target, list).slots.find(s => s.id === slotId);
+    if (!slot?.manual) return json(res, 400, { error: 'solo se pueden desmarcar las sesiones marcadas a mano' });
+    list = list.filter(s => s.id !== slot.session);
+    writeSessions(target.id, list);
+    json(res, 200, { status: { ...personStatus(target, list), can_mark: true } });
   },
 
   'GET /api/users/{id}/schedule': async (req, res, id) => {
