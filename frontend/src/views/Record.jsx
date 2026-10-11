@@ -8,6 +8,7 @@ import { useAuth } from '../store/useAuth.js'
 import { useUI, toast } from '../store/useUI.js'
 import { listRecordings, deleteRecording, recordingUrl, adminUsers, setRecorder, saveSession } from '../lib/api.js'
 import { say, beep, openCamera, startStream, stopStream } from '../lib/camera.js'
+import { useBack } from '../lib/nav.js'
 import Icon from '../components/Icon.jsx'
 import { Button, Section, Row, Segmented, Switch } from '../components/ui.jsx'
 
@@ -25,6 +26,7 @@ const fmtStamp = s => s ? `${s.slice(6, 8)}/${s.slice(4, 6)} ${s.slice(9, 11)}:$
 
 export default function Record() {
   const nav = useNavigate()
+  const back = useBack('/settings')
   const user = useAuth(s => s.user)
   const [protocol, setProtocol] = useState('cepillado')
   const [hand, setHand] = useState('right')
@@ -106,7 +108,7 @@ export default function Record() {
         <div><h1>Grabar para entrenar</h1><div className="sub">{phase === 'running' ? 'Haz lo que te pide la app' : 'Ayuda a mejorar la detección de zonas'}</div></div>
         {phase === 'running'
           ? <Button size="sm" variant="tinted" icon="xmark" onClick={stop}>Parar</Button>
-          : <Button size="sm" variant="tinted" icon="chevronLeft" onClick={() => nav(-1)}>Volver</Button>}
+          : <Button size="sm" variant="tinted" icon="chevronLeft" onClick={back}>Volver</Button>}
       </div>
 
       <div className="stage">

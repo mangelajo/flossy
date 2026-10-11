@@ -113,7 +113,9 @@ export default function Session() {
     <>
       <div className="hdr">
         <div><h1>{MODE_TITLE[mode]}</h1><div className="sub">{phase === 'done' ? 'Sesión terminada' : 'Ponte delante de la cámara'}</div></div>
-        {phase === 'running' && <Button size="sm" variant="tinted" icon="xmark" onClick={() => finish(false)}>Terminar</Button>}
+        {phase === 'running'
+          ? <Button size="sm" variant="tinted" icon="xmark" onClick={() => finish(false)}>Terminar</Button>
+          : <Button size="sm" variant="tinted" icon="chevronLeft" onClick={() => nav('/home')}>Inicio</Button>}
       </div>
 
       <div className="stage">

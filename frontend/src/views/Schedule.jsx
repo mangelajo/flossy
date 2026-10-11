@@ -1,10 +1,11 @@
 // Editor del horario de una persona (la propia, o la de un niño si eres su tutor).
 // Cada cambio se guarda al momento en el servidor.
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { useAuth } from '../store/useAuth.js'
 import { useUI, toast } from '../store/useUI.js'
 import { getSchedule, putSchedule } from '../lib/api.js'
+import { useBack } from '../lib/nav.js'
 import { MODE_LABEL } from '../components/Slots.jsx'
 import { Button, Section, Row, Segmented } from '../components/ui.jsx'
 
@@ -39,7 +40,7 @@ function SlotSheet({ slot, close, onSave, onDelete }) {
 
 export default function Schedule() {
   const { id } = useParams()
-  const nav = useNavigate()
+  const back = useBack(id === 'me' ? '/settings' : `/family/${id}`)
   const me = useAuth(s => s.user)
   const uid = id === 'me' ? me.id : id
   const [data, setData] = useState(null)
@@ -61,7 +62,7 @@ export default function Schedule() {
     <>
       <div className="hdr">
         <div><h1>Horario</h1><div className="sub">{id === 'me' ? 'Tus sesiones programadas' : 'Sesiones programadas'}</div></div>
-        <Button size="sm" variant="tinted" icon="chevronLeft" onClick={() => nav(-1)}>Volver</Button>
+        <Button size="sm" variant="tinted" icon="chevronLeft" onClick={back}>Volver</Button>
       </div>
       <Section footer={data.editable
         ? 'Una sesión cuenta si la haces completa dentro de su horario. Los días sin sesiones no rompen la racha.'
