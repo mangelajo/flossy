@@ -144,9 +144,11 @@ make            # lista todas las tareas
 ## Tests
 
 ```bash
-make test         # todo: API (node:test), visión (pytest) y la compilación del frontend
-make test-api     # solo la API
-make test-vision  # solo visión (arranca la API de Node real para emitir cookies y claves de verdad)
+make test           # API (node:test), visión (pytest), frontend (Vitest) y la compilación del frontend
+make test-api       # solo la API
+make test-vision    # solo visión (arranca la API de Node real para emitir cookies y claves de verdad)
+make test-frontend  # solo componentes y utilidades del frontend
+make e2e            # de punta a punta con Playwright: API + visión + frontend reales, cámara falsa de Chrome
 ```
 
 CI ejecuta los mismos tests en cada push y pull request, y solo construye las imágenes si pasan.

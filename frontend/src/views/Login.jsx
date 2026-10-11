@@ -104,7 +104,10 @@ export default function Login() {
   // Enlace de invitación (#/login?invite=…): abre «Crear perfil» con el código puesto.
   const [params] = useSearchParams()
   const invite = (params.get('invite') || '').toUpperCase()
-  useEffect(() => { if (invite) open(RegisterSheet, { invite }) }, [invite])
+  const opened = useRef('')  // una sola vez por enlace (React ejecuta dos veces los efectos en modo estricto)
+  useEffect(() => {
+    if (invite && opened.current !== invite) { opened.current = invite; open(RegisterSheet, { invite }) }
+  }, [invite])
   const signIn = async () => {
     try { const u = await passkeyLogin(); setUser(u); toast(`¡Hola, ${u.name}!`) }
     catch (e) { if (!cancelled(e)) toast(errorText(e, 'No se pudo entrar')) }

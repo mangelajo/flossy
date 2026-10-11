@@ -36,6 +36,8 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
         working-directory: frontend
+      - run: npm test
+        working-directory: frontend
       # Un import roto o un JSX mal cerrado falla aquí aunque ningún test lo cubra.
       - run: npm run build
         working-directory: frontend
@@ -69,3 +71,45 @@ jobs:
         run: sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends libegl1 libgles2
       - run: uv run --no-dev --group test pytest -q
         working-directory: vision
+
+  # De punta a punta: API + visión + frontend de verdad, recorridos con Chromium y su cámara falsa.
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: LFS object list
+        run: git lfs ls-files --long | cut -d' ' -f1 | sort > .lfs-assets-id
+      - uses: actions/cache@v4
+        with:
+          path: .git/lfs
+          key: lfs-${{ hashFiles('.lfs-assets-id') }}
+      - run: git lfs pull
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            api/package-lock.json
+            frontend/package-lock.json
+      - run: npm ci
+        working-directory: api
+      - run: npm ci
+        working-directory: frontend
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - name: MediaPipe necesita libEGL/libGLES
+        run: sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends libegl1 libgles2
+      - run: uv sync --no-dev
+        working-directory: vision
+      - run: npx playwright install --with-deps chromium
+        working-directory: frontend
+      - run: npm run e2e
+        working-directory: frontend
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: frontend/playwright-report
+          retention-days: 7

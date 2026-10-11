@@ -12,7 +12,7 @@ COMPOSE ?= docker compose
 BUILD_COMPOSE = $(COMPOSE) -f docker-compose.yml -f docker-compose.build.yml
 
 .DEFAULT_GOAL := help
-.PHONY: help install dev api vision frontend lab test test-api test-vision fetch analyze train build images up down logs pull
+.PHONY: help install dev api vision frontend lab test test-api test-vision test-frontend e2e fetch analyze train build images up down logs pull
 
 help: ## Lista las tareas
 	@awk 'BEGIN {FS = ":.*## "} /^[a-z-]+:.*## / {printf "  \033[36mmake %-10s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -22,7 +22,7 @@ help: ## Lista las tareas
 install: ## Instala dependencias (npm de api y frontend, uv de vision) y baja los modelos (LFS)
 	git lfs pull
 	cd api && npm ci
-	cd frontend && npm ci
+	cd frontend && npm ci && npx playwright install chromium
 	cd vision && uv sync
 
 dev: ## Arranca api (:3000), visión (:8001) y frontend (:5173) a la vez; Ctrl-C para todo
@@ -45,8 +45,14 @@ frontend: ## Solo el frontend (vite, :5173)
 lab: ## Laboratorio de grabación con HTTPS para el móvil (vision/server.py)
 	cd vision && uv run server.py --https
 
-test: test-api test-vision ## Todos los tests (API y visión) y compila el frontend
+test: test-api test-vision test-frontend ## Tests de API, visión y frontend, y compila el frontend
 	cd frontend && npx vite build --logLevel warn
+
+test-frontend: ## Tests del frontend (Vitest + Testing Library)
+	cd frontend && npm test
+
+e2e: ## De punta a punta con Playwright (levanta API, visión y frontend en otros puertos)
+	cd frontend && npm run e2e
 
 test-api: ## Tests de la API (node:test)
 	cd api && npm test

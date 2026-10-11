@@ -1,5 +1,5 @@
 // Familia: los tutores (padre, madre…) ven cómo van los niños hoy, su historial y su horario.
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../store/useAuth.js'
 import { useUI, toast } from '../store/useUI.js'
@@ -89,11 +89,12 @@ export default function Family() {
   const load = () => getFamily().then(setData).catch(e => toast(e.message))
   const add = (initialCode = '') => useUI.getState().openSheet(close =>
     <AddSheet close={close} reload={load} passwords={!!config?.password_login} initialCode={initialCode} />)
+  const opened = useRef(false)  // una sola vez (React ejecuta dos veces los efectos en modo estricto)
   useEffect(() => {
     load()
     // Enlace compartido (#/family?code=…): abre «Vincular» con el código ya puesto.
     const code = params.get('code')
-    if (code) { nav('/family', { replace: true }); add(code.toUpperCase()) }
+    if (code && !opened.current) { opened.current = true; nav('/family', { replace: true }); add(code.toUpperCase()) }
   }, [])
 
   return (
@@ -171,4 +172,4 @@ export function FamilyChild() {
   )
 }
 
-export { CodeSheet }
+export { CodeSheet, UnlinkSheet }

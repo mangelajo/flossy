@@ -13,7 +13,9 @@
 - Run `make test` before committing; CI runs the same tests and won't publish images if they fail.
 - Every change comes with tests for what it changes: `api/test/*.test.js` (node:test; integration
   tests start the real API with `startServer()` from `test/helpers.mjs`) and `vision/tests/`
-  (pytest; the `api` fixture starts the real Node API so cookies and keys are the real ones).
+  (pytest; the `api` fixture starts the real Node API so cookies and keys are the real ones),
+  `frontend/src/**/*.test.{js,jsx}` (Vitest + Testing Library) and, for user flows,
+  `frontend/e2e/` (Playwright against the real API, vision service and frontend; `make e2e`).
 - Never put real recordings or anyone's images in tests or fixtures: the repo is public. Use
   synthetic data.
 

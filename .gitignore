@@ -14,3 +14,5 @@ node_modules/
 *.swp
 recordings/
 local.mk
+frontend/test-results/
+frontend/playwright-report/

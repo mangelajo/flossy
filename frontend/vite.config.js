@@ -8,12 +8,24 @@ import react from '@vitejs/plugin-react'
 //   Visión: cd vision && uv run uvicorn app:app --port 8001
 // Para probar desde el móvil hace falta HTTPS: `npm run dev -- --host` detrás de un túnel, o
 // directamente docker compose.
+// Puertos configurables para que los tests de punta a punta (e2e/) corran junto al entorno de
+// desarrollo sin pisarlo.
+const API_PORT = process.env.FLOSSY_API_PORT || 3000
+const VISION_PORT = process.env.FLOSSY_VISION_PORT || 8001
+const ORIGIN = process.env.FLOSSY_ORIGIN || 'http://localhost:5173'
+
 export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      '/api': { target: 'http://127.0.0.1:3000', headers: { origin: 'http://localhost:5173' } },
-      '/ws': { target: 'ws://127.0.0.1:8001', ws: true }
+      '/api': { target: `http://127.0.0.1:${API_PORT}`, headers: { origin: ORIGIN } },
+      '/ws': { target: `ws://127.0.0.1:${VISION_PORT}`, ws: true }
     }
+  },
+  // Tests (npm test): componentes en jsdom con Testing Library. Los de punta a punta van aparte (e2e/).
+  test: {
+    environment: 'jsdom',
+    setupFiles: ['./src/test/setup.js'],
+    include: ['src/**/*.test.{js,jsx}']
   }
 })
