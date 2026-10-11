@@ -19,3 +19,12 @@ dependencies = [
 dev = [
     "ultralytics>=8.4.175",
 ]
+# Tests (sin YOLO/PyTorch): uv run --no-dev --group test pytest
+test = [
+    "httpx2",
+    "pytest>=8.4",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

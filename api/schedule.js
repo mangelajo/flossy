@@ -35,7 +35,7 @@ export function cleanSchedule(list) {
     if (minutes(start) >= minutes(end)) throw new Error(`«${name}»: la hora de fin tiene que ser posterior a la de inicio`);
     const days = [...new Set((Array.isArray(s?.days) ? s.days : []).map(Number).filter(d => Number.isInteger(d) && d >= 0 && d <= 6))].sort();
     if (!days.length) throw new Error(`«${name}»: elige al menos un día`);
-    let id = String(s?.id ?? '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 24) || name.toLowerCase().normalize('NFD').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'franja';
+    let id = String(s?.id ?? '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 24) || name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'franja';
     while (seen.has(id)) id += '-' + i;
     seen.add(id);
     return { id, name, start, end, days, mode: ['brush', 'floss', 'both'].includes(s?.mode) ? s.mode : 'both' };

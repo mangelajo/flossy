@@ -1,0 +1,71 @@
+# Tests de las tres partes. Lo llama images.yml antes de construir (en push y en PR), así que
+# no se publica ninguna imagen con tests rotos. También se puede lanzar a mano.
+name: tests
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  api:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # node:22-alpine en las imágenes: CI con la misma versión.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: api/package-lock.json
+      - run: npm ci
+        working-directory: api
+      - run: npm test
+        working-directory: api
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+        working-directory: frontend
+      # Un import roto o un JSX mal cerrado falla aquí aunque ningún test lo cubra.
+      - run: npm run build
+        working-directory: frontend
+
+  vision:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Los modelos (git LFS) hacen falta: app.py los carga al arrancar. Cacheados para no gastar
+      # la cuota de LFS.
+      - name: LFS object list
+        run: git lfs ls-files --long | cut -d' ' -f1 | sort > .lfs-assets-id
+      - uses: actions/cache@v4
+        with:
+          path: .git/lfs
+          key: lfs-${{ hashFiles('.lfs-assets-id') }}
+      - run: git lfs pull
+      # Los tests arrancan la API de Node real para que las cookies las firme ella.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: api/package-lock.json
+      - run: npm ci
+        working-directory: api
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - name: MediaPipe necesita libEGL/libGLES
+        run: sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends libegl1 libgles2
+      - run: uv run --no-dev --group test pytest -q
+        working-directory: vision

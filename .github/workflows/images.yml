@@ -1,5 +1,5 @@
 # Construye las tres imágenes (amd64 + arm64) y las publica en ghcr.io/<owner>/flossy-{api,vision,web}.
-# En PRs solo se construyen (sin publicar). En main: :latest y :sha-<corto>; en tags vX.Y.Z: :X.Y.Z.
+# Antes, los tests (tests.yml): si fallan no se construye nada. En PRs solo se construyen (sin publicar). En main: :latest y :sha-<corto>; en tags vX.Y.Z: :X.Y.Z.
 name: images
 
 on:
@@ -18,7 +18,11 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  tests:
+    uses: ./.github/workflows/tests.yml
+
   build:
+    needs: tests
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false

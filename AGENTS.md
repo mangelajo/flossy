@@ -8,6 +8,15 @@
   at the top of every README.
 - Keep the language links line (`**English** · [Español](README.es.md)`) at the top of each README.
 
+## Tests
+
+- Run `make test` before committing; CI runs the same tests and won't publish images if they fail.
+- Every change comes with tests for what it changes: `api/test/*.test.js` (node:test; integration
+  tests start the real API with `startServer()` from `test/helpers.mjs`) and `vision/tests/`
+  (pytest; the `api` fixture starts the real Node API so cookies and keys are the real ones).
+- Never put real recordings or anyone's images in tests or fixtures: the repo is public. Use
+  synthetic data.
+
 ## Project conventions
 
 - The app's UI text and code comments are in Spanish; keep new UI strings and comments in Spanish.

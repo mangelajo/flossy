@@ -139,6 +139,16 @@ make dev        # api :3000 + vision :8001 + frontend http://localhost:5173 (dat
 make            # lists every task
 ```
 
+## Tests
+
+```bash
+make test         # everything: API (node:test), vision (pytest) and the frontend build
+make test-api     # API only
+make test-vision  # vision service only (starts the real Node API to issue real cookies and keys)
+```
+
+CI runs the same tests on every push and pull request, and only builds images when they pass.
+
 ## Training the zone detector
 
 With `FLOSSY_SERVER` in `local.mk` (not committed) and an admin API key in `~/.flossy-key`:

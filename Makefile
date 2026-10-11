@@ -12,7 +12,7 @@ COMPOSE ?= docker compose
 BUILD_COMPOSE = $(COMPOSE) -f docker-compose.yml -f docker-compose.build.yml
 
 .DEFAULT_GOAL := help
-.PHONY: help install dev api vision frontend lab fetch analyze train build images up down logs pull
+.PHONY: help install dev api vision frontend lab test test-api test-vision fetch analyze train build images up down logs pull
 
 help: ## Lista las tareas
 	@awk 'BEGIN {FS = ":.*## "} /^[a-z-]+:.*## / {printf "  \033[36mmake %-10s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -44,6 +44,15 @@ frontend: ## Solo el frontend (vite, :5173)
 
 lab: ## Laboratorio de grabación con HTTPS para el móvil (vision/server.py)
 	cd vision && uv run server.py --https
+
+test: test-api test-vision ## Todos los tests (API y visión) y compila el frontend
+	cd frontend && npx vite build --logLevel warn
+
+test-api: ## Tests de la API (node:test)
+	cd api && npm test
+
+test-vision: ## Tests del servicio de visión (pytest; arranca la API de Node)
+	cd vision && uv run --no-dev --group test pytest -q
 
 build: ## Compila el frontend (frontend/dist)
 	cd frontend && npx vite build

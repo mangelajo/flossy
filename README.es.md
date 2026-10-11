@@ -140,6 +140,16 @@ make dev        # api :3000 + visión :8001 + frontend http://localhost:5173 (da
 make            # lista todas las tareas
 ```
 
+## Tests
+
+```bash
+make test         # todo: API (node:test), visión (pytest) y la compilación del frontend
+make test-api     # solo la API
+make test-vision  # solo visión (arranca la API de Node real para emitir cookies y claves de verdad)
+```
+
+CI ejecuta los mismos tests en cada push y pull request, y solo construye las imágenes si pasan.
+
 ## Entrenar el detector de zonas
 
 Con `FLOSSY_SERVER` en `local.mk` (no va a git) y una clave de API de administrador en
