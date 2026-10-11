@@ -10,8 +10,8 @@ import { say, beep, openCamera, startStream, stopStream } from '../lib/camera.js
 import Icon from '../components/Icon.jsx'
 import { Button } from '../components/ui.jsx'
 
-export const ZONES = [['sup-izq', '↖ izq'], ['sup-front', '↑ centro'], ['sup-der', '↗ der'],
-                      ['inf-izq', '↙ izq'], ['inf-front', '↓ centro'], ['inf-der', '↘ der']]
+export const ZONES = [['sup-izq', '↖ izq'], ['sup-front', '↑'], ['sup-der', '↗ der'],
+                      ['inf-izq', '↙ izq'], ['inf-front', '↓'], ['inf-der', '↘ der']]
 const PER_ZONE = { brush: BRUSH_GOAL / 6, floss: FLOSS_GOAL / 6 }
 const MODE_TITLE = { both: 'Cepillado + seda', brush: 'Cepillado', floss: 'Seda dental' }
 

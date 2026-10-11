@@ -21,7 +21,7 @@
 .zone{position:relative;height:34px;border-radius:var(--r-sm);background:var(--surface-2);overflow:hidden;
   font-size:12px;display:flex;align-items:center;justify-content:center;color:var(--label-2)}
 .zone>i{position:absolute;inset:0;transform-origin:left;transform:scaleX(0);transition:transform .25s var(--ease);opacity:.5}
-.zone>span{position:relative}
+.zone>span{position:relative;white-space:nowrap;overflow:hidden;text-overflow:clip;max-width:100%}
 .zone.full{color:var(--label)}
 .zone.target{box-shadow:inset 0 0 0 2px var(--label)}
 .zone.ok{box-shadow:inset 0 0 0 2px var(--green)}

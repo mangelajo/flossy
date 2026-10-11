@@ -4,6 +4,21 @@ Web app para el móvil que guía el cepillado y la seda dental con la cámara: t
 (arriba/abajo × izquierda/centro/derecha) y su barra solo sube mientras el sistema confirma que
 estás en ella. Cada persona de la casa tiene su perfil e historial.
 
+<table>
+  <tr>
+    <td align="center"><img src="docs/screenshots/sesion.png" width="240" alt="Sesión guiada: la app pide cada zona y su barra sube mientras te ve cepillando en ella"><br><sub><b>Sesión guiada</b>: zona a zona, con voz</sub></td>
+    <td align="center"><img src="docs/screenshots/inicio.png" width="240" alt="Inicio: sesiones de hoy, racha y botón para empezar"><br><sub><b>Inicio</b>: lo que toca hoy y la racha</sub></td>
+    <td align="center"><img src="docs/screenshots/familia.png" width="240" alt="Familia: cómo van los niños hoy"><br><sub><b>Familia</b>: cómo van los niños</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/screenshots/nino.png" width="240" alt="Ficha de un niño: sesiones de hoy, horario y calendario"><br><sub><b>Ficha del niño</b>: hoy y su calendario</sub></td>
+    <td align="center"><img src="docs/screenshots/historial.png" width="240" alt="Historial: calendario de las últimas semanas y sesiones"><br><sub><b>Historial</b>: las últimas 6 semanas</sub></td>
+    <td align="center"><img src="docs/screenshots/horario.png" width="240" alt="Horario: sesiones programadas con su franja horaria"><br><sub><b>Horario</b>: una, dos o las sesiones que quieras</sub></td>
+  </tr>
+</table>
+
+<sub>Capturas con datos de demostración.</sub>
+
 ## Estructura
 
 | Carpeta | Qué es |
