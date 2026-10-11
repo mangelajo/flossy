@@ -1,0 +1,430 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>flossy · prototipo</title>
+<style>
+  :root {
+    --bg:#000; --surface:#1c1c1e; --surface-2:#2c2c2e; --label:#fff;
+    --label-2:rgba(235,235,245,.6); --green:#30d158; --orange:#ff9f0a; --grey:#8e8e93; --blue:#0a84ff;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--label); font:15px/1.4 -apple-system, system-ui, sans-serif;
+         padding:env(safe-area-inset-top) 12px env(safe-area-inset-bottom); }
+  main { max-width:520px; margin:0 auto; display:flex; flex-direction:column; gap:12px; padding-block:12px; }
+  .stage { position:relative; border-radius:16px; overflow:hidden; background:var(--surface); }
+  canvas { display:block; width:100%; height:auto; }
+  .badge { position:absolute; top:10px; left:10px; padding:6px 12px; border-radius:999px; font-weight:600;
+           background:rgba(0,0,0,.6); backdrop-filter:blur(8px); }
+  .badge.brush { color:var(--green); } .badge.floss { color:var(--orange); } .badge.idle { color:var(--grey); }
+  .hint { position:absolute; bottom:10px; left:10px; right:10px; text-align:center; padding:8px; border-radius:12px;
+          background:rgba(0,0,0,.6); backdrop-filter:blur(8px); font-weight:600; }
+  .cards { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .card { background:var(--surface); border-radius:14px; padding:12px 14px; }
+  .card h2 { margin:0 0 4px; font-size:13px; font-weight:400; color:var(--label-2); }
+  .big { font-size:32px; font-weight:600; font-variant-numeric:tabular-nums; }
+  .bar { height:6px; border-radius:3px; background:var(--surface-2); overflow:hidden; margin-top:6px; }
+  .bar > i { display:block; height:100%; width:0; transition:width .2s; }
+  .quads { display:grid; grid-template-columns:1fr 1fr 1fr; gap:4px; margin-top:8px; }
+  .quad { position:relative; height:34px; border-radius:8px; background:var(--surface-2); overflow:hidden;
+          font-size:12px; display:flex; align-items:center; justify-content:center; }
+  .quad > i { position:absolute; inset:0; transform-origin:left; transform:scaleX(0); transition:transform .2s; }
+  .quad > span { position:relative; }
+  .quad.active { outline:2px solid var(--label); }
+  .row { display:flex; gap:8px; }
+  button { flex:1; font:inherit; font-weight:600; padding:12px; border:0; border-radius:12px; color:var(--label);
+           background:var(--surface-2); }
+  button.primary { background:var(--green); color:#000; }
+  .guide { position:absolute; inset:auto 10px 10px 10px; padding:12px 14px; border-radius:14px;
+           background:rgba(0,0,0,.72); backdrop-filter:blur(10px); }
+  .guide .step { font-size:12px; color:var(--label-2); display:flex; justify-content:space-between; }
+  .guide .text { font-size:22px; font-weight:600; margin:2px 0 6px; }
+  .guide .count { font-size:40px; font-weight:600; font-variant-numeric:tabular-nums; float:right; margin-left:8px; line-height:1; }
+  .guide.transition .text { color:var(--orange); }
+  .guide .next { font-size:12px; color:var(--label-2); clear:both; }
+  .rec { position:absolute; top:10px; right:10px; padding:6px 10px; border-radius:999px; font-weight:600;
+         font-size:12px; background:#ff453a; color:#fff; }
+  .form { display:grid; gap:8px; }
+  .form label { display:flex; align-items:center; gap:8px; color:var(--label-2); }
+  .form input[type=text], .form select { flex:1; font:inherit; color:var(--label); background:var(--surface-2);
+         border:0; border-radius:10px; padding:10px; }
+  button.rec-btn { background:#ff453a; color:#fff; }
+  .quad.ok { outline:2px solid var(--green); }
+  .quad.warn { outline:2px solid var(--orange); }
+  .quad.target:not(.ok):not(.warn) { outline:2px solid var(--label); }
+  .guide .status { font-size:14px; font-weight:600; margin-top:4px; }
+  .guide .status.ok { color:var(--green); } .guide .status.warn { color:var(--orange); }
+  .debug { font:12px ui-monospace, monospace; color:var(--label-2); white-space:pre-wrap; }
+</style>
+</head>
+<body>
+<main>
+  <div class="stage">
+    <canvas id="view" width="480" height="360"></canvas>
+    <div id="badge" class="badge idle">Pulsa empezar</div>
+    <div id="hint" class="hint" hidden></div>
+    <div id="recBadge" class="rec" hidden>● REC</div>
+    <div id="guide" class="guide" hidden>
+      <div class="step"><span id="gStep"></span><span id="gTotal"></span></div>
+      <div class="count" id="gCount"></div>
+      <div class="text" id="gText"></div>
+      <div class="next" id="gNext"></div>
+      <div class="status" id="gStatus"></div>
+    </div>
+  </div>
+
+  <div class="cards">
+    <div class="card">
+      <h2>Cepillado · faltan</h2>
+      <div class="big" id="brushLeft">2:00</div>
+      <div class="bar"><i id="brushBar" style="background:var(--green)"></i></div>
+      <div class="quads" id="brushQuads"></div>
+    </div>
+    <div class="card">
+      <h2>Seda · faltan</h2>
+      <div class="big" id="flossLeft">1:00</div>
+      <div class="bar"><i id="flossBar" style="background:var(--orange)"></i></div>
+      <div class="quads" id="flossQuads"></div>
+    </div>
+  </div>
+
+  <div class="card form">
+    <h2>Sesión guiada (la barra de cada zona sube solo si estás en ella)</h2>
+    <label>Qué <select id="guidedWhat">
+      <option value="both">Cepillado + seda</option>
+      <option value="brush">Solo cepillado</option>
+      <option value="floss">Solo seda</option>
+    </select></label>
+    <button id="guided" class="primary">Empezar sesión guiada</button>
+  </div>
+
+  <div class="row">
+    <button id="start">Modo libre</button>
+    <button id="reset">Reiniciar</button>
+  </div>
+
+  <div class="card form">
+    <h2>Grabación guiada (para recoger datos)</h2>
+    <label>Quién <input type="text" id="who" placeholder="nombre" autocomplete="off"></label>
+    <label>Protocolo <select id="protocol"></select></label>
+    <label><input type="checkbox" id="saveImages" checked> Guardar fotogramas enviados al servidor</label>
+    <label><input type="checkbox" id="saveVideo" checked> Grabar vídeo completo en el móvil y subirlo</label>
+    <button id="record" class="rec-btn">Grabar guiado</button>
+    <div class="debug" id="recStatus"></div>
+  </div>
+  <div class="debug" id="debug"></div>
+</main>
+
+<script>
+// Orden de la cuadrícula 3×2 tal como te ves en el espejo (tu izquierda a la izquierda).
+const ZONES = [["sup-izq", "↖ izq"], ["sup-front", "↑ centro"], ["sup-der", "↗ der"],
+               ["inf-izq", "↙ izq"], ["inf-front", "↓ centro"], ["inf-der", "↘ der"]];
+const ZONE_NAMES = { "sup-izq": "arriba izquierda", "sup-front": "arriba centro", "sup-der": "arriba derecha",
+                     "inf-izq": "abajo izquierda", "inf-front": "abajo centro", "inf-der": "abajo derecha" };
+const BRUSH_TARGET = 120, FLOSS_TARGET = 60;
+const SEND_WIDTH = 480, JPEG_Q = 0.7;
+const $ = id => document.getElementById(id);
+
+for (const [box, color] of [["brushQuads", "var(--green)"], ["flossQuads", "var(--orange)"]])
+  $(box).innerHTML = ZONES.map(([k, label]) =>
+    `<div class="quad" data-q="${k}"><i style="background:${color};opacity:.45"></i><span>${label}</span></div>`).join("");
+
+const video = document.createElement("video");
+video.playsInline = true; video.muted = true;
+const view = $("view"), ctx = view.getContext("2d");
+const grab = document.createElement("canvas"), gctx = grab.getContext("2d");
+
+let ws = null, running = false, inFlight = false, last = null, sentAt = 0;
+let frames = 0, fpsT = performance.now(), fps = 0, rtt = 0;
+
+const fmt = s => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`;
+
+async function start() {
+  const stream = await navigator.mediaDevices.getUserMedia({
+    video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } }, audio: false });
+  video.srcObject = stream;
+  await video.play();
+  const scale = SEND_WIDTH / video.videoWidth;
+  grab.width = view.width = SEND_WIDTH;
+  grab.height = view.height = Math.round(video.videoHeight * scale);
+
+  ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws`);
+  ws.binaryType = "arraybuffer";
+  ws.onmessage = e => {
+    const msg = JSON.parse(e.data);
+    if (msg.error && !msg.state) { $("badge").textContent = msg.error; stopGuided(); return; }
+    last = msg;
+    inFlight = false;
+    if (last.guide) onGuide(last.guide);
+    rtt = performance.now() - sentAt;
+    frames++;
+    render();
+    sendFrame();
+  };
+  ws.onclose = () => { running = false; $("badge").textContent = "Desconectado"; };
+  $("start").textContent = "Parar";
+  requestAnimationFrame(draw);
+  // Wake lock: que la pantalla no se apague a mitad de cepillado.
+  try { await navigator.wakeLock?.request("screen"); } catch {}
+  // No devolver hasta que el socket esté abierto: quien llama (p. ej. la grabación) va a usarlo ya.
+  await new Promise((resolve, reject) => {
+    if (ws.readyState === WebSocket.OPEN) return resolve();
+    ws.onopen = resolve;
+    ws.onerror = () => reject(new Error("No se pudo conectar con el servidor"));
+  });
+  ws.onerror = null;
+  running = true;
+  sendFrame();
+}
+
+async function stop() {
+  if (recording) await finishRecording(null);
+  if (guided) stopGuided();
+  running = false;
+  ws?.close();
+  video.srcObject?.getTracks().forEach(t => t.stop());
+  $("start").textContent = "Modo libre";
+}
+
+function sendFrame() {
+  if (!running || inFlight || ws.readyState !== 1) return;
+  gctx.drawImage(video, 0, 0, grab.width, grab.height);
+  grab.toBlob(b => {
+    if (!b || !running) return;
+    inFlight = true; sentAt = performance.now();
+    b.arrayBuffer().then(buf => ws.send(buf));
+  }, "image/jpeg", JPEG_Q);
+}
+
+// El vídeo se pinta a 60 fps en local; los overlays se actualizan cuando llega la respuesta.
+function draw() {
+  if (!video.srcObject) return;
+  const W = view.width, H = view.height;
+  ctx.save();
+  ctx.translate(W, 0); ctx.scale(-1, 1);  // espejo: todo lo de dentro va en coordenadas sin espejar
+  ctx.drawImage(video, 0, 0, W, H);
+  if (last && !last.error) {
+    if (last.mouth) {
+      ctx.strokeStyle = "rgba(10,132,255,.8)"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(last.mouth.c[0] * W, last.mouth.c[1] * H, last.mouth.r * W, 0, 2 * Math.PI); ctx.stroke();
+    }
+    ctx.fillStyle = "#30d158";
+    for (const hand of last.hands) for (const [x, y] of hand) ctx.fillRect(x * W - 2, y * H - 2, 4, 4);
+    ctx.strokeStyle = "#bf5af2"; ctx.lineWidth = 3;
+    for (const b of last.brushes) {
+      const [x1, y1, x2, y2] = b.box;
+      ctx.strokeRect(x1 * W, y1 * H, (x2 - x1) * W, (y2 - y1) * H);
+    }
+  }
+  ctx.restore();
+  requestAnimationFrame(draw);
+}
+
+function render() {
+  if (last.error) return;
+  const f = last.feedback;
+  const badge = $("badge");
+  badge.className = `badge ${last.state}`;
+  badge.textContent = { brush: "Cepillando", floss: "Seda dental", idle: "Esperando…" }[last.state]
+    + (last.zone ? ` · ${last.zone}` : "");
+
+  if (last.coach) renderCoach(last.coach);
+  else {
+    $("brushLeft").textContent = fmt(f.brush_left);
+    $("flossLeft").textContent = fmt(f.floss_left);
+    $("brushBar").style.width = `${Math.min(f.brush / BRUSH_TARGET, 1) * 100}%`;
+    $("flossBar").style.width = `${Math.min(f.floss / FLOSS_TARGET, 1) * 100}%`;
+    for (const [box, act] of [["brushQuads", "brush"], ["flossQuads", "floss"]])
+      for (const el of $(box).children) {
+        el.querySelector("i").style.transform = `scaleX(${f[`${act}_zones`][el.dataset.q]})`;
+        el.classList.toggle("active", last.state === act && last.zone === el.dataset.q);
+      }
+  }
+
+  const hint = $("hint");
+  let msg = "";
+  if (!last.debug.face) msg = "No te veo la cara: acércate o mejora la luz";
+  else if (f.brush_left === 0 && f.floss_left === 0) msg = "¡Hecho! Cepillado y seda completos 🎉";
+  else if (last.state === "brush" && f.next_zone && f.brush_zones[last.zone] >= 1)
+    msg = `Esta zona ya está. Ahora toca: ${ZONE_NAMES[f.next_zone]}`;
+  else if (f.brush_left === 0 && last.state === "brush") msg = "Cepillado completo. ¡Ahora la seda!";
+  hint.hidden = !msg || recording || guided; hint.textContent = msg;
+
+  const now = performance.now();
+  if (now - fpsT > 1000) { fps = frames * 1000 / (now - fpsT); frames = 0; fpsT = now; }
+  const d = last.debug;
+  $("debug").textContent =
+    `${fps.toFixed(1)} fps · rtt ${rtt.toFixed(0)} ms · inferencia ${d.infer_ms} ms · ${d.size.join("×")}\n` +
+    `manos=${d.hands} cerca=${d.hands_near} osc=${d.osc.toFixed(2)} cepillo=${d.brush} raw=${d.raw} zona=${d.zone ?? "-"}`;
+}
+
+// ----------------------------------------------------------------- sesión guiada --
+let guided = false, guidedStep = -1;
+const PER_ZONE = { brush: 20, floss: 10 };
+const STATUS = {
+  ok: ["ok", "✓ Bien, sigue así"],
+  checking: ["", "Comprobando…"],
+  idle: ["warn", "Empieza cuando quieras"],
+};
+
+async function startGuided() {
+  say("Vamos allá"); beep(660);  // desbloquea la voz en iOS (gesto del usuario)
+  if (!running) await start();
+  guided = true; guidedStep = -1;
+  ws.send(JSON.stringify({ type: "guided_start", what: $("guidedWhat").value }));
+  $("guided").textContent = "Terminar sesión";
+}
+
+function stopGuided() {
+  guided = false;
+  ws?.readyState === 1 && ws.send(JSON.stringify({ type: "guided_stop" }));
+  $("guide").hidden = true;
+  $("guided").textContent = "Empezar sesión guiada";
+}
+
+function renderCoach(c) {
+  for (const [box, act] of [["brushQuads", "brush"], ["flossQuads", "floss"]])
+    for (const el of $(box).children) {
+      const z = el.dataset.q, isTarget = !c.done && c.activity === act && c.zone === z;
+      el.querySelector("i").style.transform = `scaleX(${c.progress[act][z]})`;
+      el.classList.toggle("target", isTarget);
+      el.classList.toggle("ok", isTarget && c.status === "ok");
+      el.classList.toggle("warn", isTarget && ["wrong_zone", "wrong_activity"].includes(c.status));
+      el.classList.remove("active");
+    }
+  $("brushLeft").textContent = fmt(c.left.brush);
+  $("flossLeft").textContent = fmt(c.left.floss);
+  $("brushBar").style.width = `${(1 - c.left.brush / BRUSH_TARGET) * 100}%`;
+  $("flossBar").style.width = `${(1 - c.left.floss / FLOSS_TARGET) * 100}%`;
+
+  if (c.step !== guidedStep) {
+    guidedStep = c.step;
+    beep(c.done ? 1040 : 880, c.done ? 250 : 120);
+    say(c.done ? "¡Terminado! Muy bien" : c.text);
+  }
+  const el = $("guide");
+  el.hidden = false;
+  el.classList.remove("transition");
+  $("gStep").textContent = c.done ? "Completado" : `Zona ${c.step + 1} de ${c.steps}`;
+  $("gTotal").textContent = "";
+  $("gText").textContent = c.text;
+  $("gCount").textContent = c.done ? "✓" : Math.ceil((1 - c.progress[c.activity][c.zone]) * PER_ZONE[c.activity]);
+  $("gNext").textContent = c.p !== null ? `confianza en esta zona: ${(c.p * 100).toFixed(0)}%` : "";
+  let [cls, msg] = STATUS[c.status] ?? ["", ""];
+  if (c.status === "wrong_zone") [cls, msg] = ["warn", `Parece que estás en ${c.guess_name ?? "otra zona"}`];
+  if (c.status === "wrong_activity") [cls, msg] = ["warn", c.activity === "brush" ? "Ahora toca el cepillo" : "Ahora toca la seda"];
+  if (c.done) [cls, msg] = ["ok", "Cepillado y seda completos 🎉"];
+  $("gStatus").className = `status ${cls}`;
+  $("gStatus").textContent = msg;
+  if (c.done) setTimeout(stopGuided, 4000);
+}
+
+$("guided").onclick = () => (guided ? stopGuided() : startGuided().catch(e => { $("badge").textContent = e.message; }));
+
+// ---------------------------------------------------------------- grabación guiada --
+let recording = false, recId = null, lastStep = -1, mediaRec = null, chunks = [], mediaStart = 0, firstLabelAt = null;
+
+fetch("protocols").then(r => r.json()).then(ps => {
+  $("protocol").innerHTML = Object.entries(ps).map(([k, p]) =>
+    `<option value="${k}">${p.title} · ${fmt(p.seconds)}</option>`).join("");
+});
+try { $("who").value = localStorage.getItem("flossy-who") || ""; } catch {}
+
+function say(text) {
+  if (!window.speechSynthesis) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = "es-ES"; u.rate = 1.05;
+  speechSynthesis.speak(u);
+}
+
+let audio = null;
+function beep(freq = 880, ms = 120) {
+  try {
+    audio ??= new AudioContext();
+    const o = audio.createOscillator(), g = audio.createGain();
+    o.frequency.value = freq; g.gain.value = 0.15;
+    o.connect(g).connect(audio.destination);
+    o.start(); o.stop(audio.currentTime + ms / 1000);
+  } catch {}
+}
+
+async function startRecording() {
+  // iOS solo deja hablar/sonar tras un gesto del usuario: lo "desbloqueamos" antes de cualquier await.
+  say("Empezamos"); beep(660);
+  if (!running) await start();
+  const who = $("who").value.trim();
+  try { localStorage.setItem("flossy-who", who); } catch {}
+  recording = true; recId = null; lastStep = -1; firstLabelAt = null; chunks = [];
+  if ($("saveVideo").checked && window.MediaRecorder) {
+    const type = ["video/mp4", "video/webm;codecs=vp9", "video/webm"].find(t => MediaRecorder.isTypeSupported(t));
+    mediaRec = new MediaRecorder(video.srcObject, type ? { mimeType: type, videoBitsPerSecond: 2_500_000 } : undefined);
+    mediaRec.ondataavailable = e => e.data.size && chunks.push(e.data);
+    mediaRec.start(1000);
+    mediaStart = performance.now();
+  }
+  ws.send(JSON.stringify({ type: "record_start", protocol: $("protocol").value,
+                           save_images: $("saveImages").checked, who }));
+  $("record").textContent = "Cancelar grabación";
+  $("recBadge").hidden = false;
+  $("recStatus").textContent = "";
+}
+
+function onGuide(g) {
+  if (g.done) return finishRecording(g);
+  if (!recording) return;
+  if (firstLabelAt === null) firstLabelAt = sentAt;  // el fotograma que fija t=0 se capturó aquí
+  recId = g.id;
+  if (g.step !== lastStep) {
+    lastStep = g.step;
+    beep(g.activity === "idle" ? 520 : 880);
+    say(g.text);
+  }
+  const el = $("guide");
+  el.hidden = false;
+  el.classList.toggle("transition", g.phase === "transition");
+  $("gStep").textContent = `Paso ${g.step + 1} de ${g.steps}`;
+  $("gTotal").textContent = `quedan ${fmt(g.total_left)}`;
+  $("gCount").textContent = Math.ceil(g.remaining);
+  $("gText").textContent = g.text;
+  $("gNext").textContent = g.next ? `Después: ${g.next}` : "Último paso";
+}
+
+async function finishRecording(g) {
+  const cancelled = !g;
+  recording = false;
+  $("guide").hidden = true; $("recBadge").hidden = true;
+  $("record").textContent = "Grabar guiado";
+  if (cancelled) ws?.readyState === 1 && ws.send(JSON.stringify({ type: "record_stop" }));
+  else { say("Terminado. ¡Muy bien!"); beep(1040, 250); }
+  const id = g?.id ?? recId;
+  let status = cancelled ? `Cancelada (${id ?? "sin datos"}).` : `Guardada ${id}: ${g.frames} fotogramas.`;
+  $("recStatus").textContent = status;
+  if (mediaRec && id) {
+    const rec = mediaRec; mediaRec = null;
+    await new Promise(res => { rec.onstop = res; rec.stop(); });
+    const blob = new Blob(chunks, { type: rec.mimeType });
+    const offset = firstLabelAt === null ? 0 : firstLabelAt - mediaStart;
+    $("recStatus").textContent = `${status}\nSubiendo vídeo (${(blob.size / 1e6).toFixed(1)} MB)…`;
+    try {
+      const r = await fetch(`upload/${encodeURIComponent(id)}?offset_ms=${offset.toFixed(0)}`,
+                            { method: "POST", headers: { "Content-Type": rec.mimeType }, body: blob });
+      $("recStatus").textContent = `${status}\nVídeo subido (${(blob.size / 1e6).toFixed(1)} MB)` + (r.ok ? "" : ` · error ${r.status}`);
+    } catch (e) {
+      $("recStatus").textContent = `${status}\nNo se pudo subir el vídeo: ${e.message}`;
+    }
+  } else if (mediaRec) {
+    mediaRec.stop(); mediaRec = null;
+  }
+}
+
+$("record").onclick = () => (recording ? finishRecording(null) : startRecording().catch(e => {
+  $("recStatus").textContent = e.message;
+}));
+
+$("start").onclick = () => (running ? stop() : start().catch(e => { $("badge").textContent = e.message; }));
+$("reset").onclick = () => ws?.readyState === 1 && ws.send(JSON.stringify({ type: "reset" }));
+</script>
+</body>
+</html>

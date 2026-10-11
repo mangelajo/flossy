@@ -1,0 +1,9 @@
+experiments/models/
+*.pt
+.venv/
+__pycache__/
+*.mp4
+*.csv
+experiments/data/
+.DS_Store
+*.pem
