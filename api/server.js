@@ -190,6 +190,8 @@ const POLICY_ERRORS = {
   'too-long': `la contraseña puede tener como mucho ${MAX_LENGTH} caracteres`,
   'too-common': 'esta contraseña es demasiado fácil de adivinar'
 };
+// El primer perfil (el administrador) nunca necesita código, para poder arrancar con INVITE_ONLY.
+const needInvite = () => INVITE_ONLY && db.users.length > 0;
 function inviteOk(code) { return db.invites.find(i => i.code === code && !i.usedBy && !i.revoked) || null; }
 function useInvite(user, code) {
   const inv = inviteOk(code);
@@ -256,7 +258,7 @@ function cleanSession(b) {
 const routes = {
   'GET /api/health': async (req, res) => json(res, 200, { ok: true }),
 
-  'GET /api/config': async (req, res) => json(res, 200, { invite_only: INVITE_ONLY, password_login: PASSWORD_LOGIN, has_users: db.users.length > 0 }),
+  'GET /api/config': async (req, res) => json(res, 200, { invite_only: needInvite(), password_login: PASSWORD_LOGIN, has_users: db.users.length > 0 }),
 
   'GET /api/me': async (req, res) => {
     const user = requireUser(req, res);
@@ -268,7 +270,7 @@ const routes = {
     const name = text(body.name).trim().slice(0, 40);
     if (!name) return json(res, 400, { error: 'falta el nombre' });
     const code = text(body.code).trim().toUpperCase();
-    if (INVITE_ONLY && !inviteOk(code)) return json(res, 403, { error: 'necesitas un código de invitación válido', code: 'invite' });
+    if (needInvite() && !inviteOk(code)) return json(res, 403, { error: 'necesitas un código de invitación válido', code: 'invite' });
     { const wait = SIGNUPS.take(clientAddr(req)); if (wait) return tooMany(res, wait); }
     const uid = crypto.randomBytes(12).toString('base64url');
     const options = await generateRegistrationOptions({
@@ -289,7 +291,7 @@ const routes = {
     if (!v.verified) return json(res, 400, { error: 'no verificado' });
     const { credential } = v.registrationInfo;
     if (db.creds.some(x => x.id === credential.id)) return json(res, 409, { error: 'esta passkey ya está registrada' });
-    if (INVITE_ONLY && !inviteOk(c.code)) return json(res, 403, { error: 'el código de invitación ya no es válido', code: 'invite' });
+    if (needInvite() && !inviteOk(c.code)) return json(res, 403, { error: 'el código de invitación ya no es válido', code: 'invite' });
     const user = { id: c.uid, name: c.name, created: new Date().toISOString() };
     if (INVITE_ONLY) useInvite(user, c.code);
     claimFirstAdmin(user);
@@ -359,7 +361,7 @@ const routes = {
       const name = text(body.name).trim().slice(0, 40);
       if (!name) return json(res, 400, { error: 'falta el nombre', code: 'missing' });
       const code = text(body.code).trim().toUpperCase();
-      if (INVITE_ONLY && !inviteOk(code)) return json(res, 403, { error: 'necesitas un código de invitación válido', code: 'invite' });
+      if (needInvite() && !inviteOk(code)) return json(res, 403, { error: 'necesitas un código de invitación válido', code: 'invite' });
       const problem = passwordProblem(body.password, name);
       if (problem) return json(res, 400, { error: POLICY_ERRORS[problem], code: problem });
       if (nameTaken(name)) return json(res, 409, { error: 'ya hay un perfil con ese nombre', code: 'name-taken' });
