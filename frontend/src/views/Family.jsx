@@ -30,6 +30,24 @@ function CodeSheet({ child, title }) {
   </>
 }
 
+const fold = t => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase()
+
+// Dejar de ser tutor no se puede deshacer sin otro código: hay que escribir el nombre del niño.
+function UnlinkSheet({ name, close, onConfirm }) {
+  const [typed, setTyped] = useState('')
+  const ok = fold(typed) === fold(name)
+  return <>
+    <h3>Dejar de ser tutor de {name}</h3>
+    <div className="muted small" style={{ marginBottom: 12 }}>
+      Dejarás de ver su progreso y de gestionar su horario. Para volver a ser su tutor necesitarás un
+      código nuevo. Escribe <b>{name}</b> para confirmarlo.
+    </div>
+    <input className="input" placeholder={name} autoComplete="off" autoCapitalize="words" value={typed} onChange={e => setTyped(e.target.value)} />
+    <div style={{ height: 12 }} />
+    <Button variant="danger" icon="xmark" disabled={!ok} onClick={() => { close(); onConfirm() }}>Dejar de ser su tutor</Button>
+  </>
+}
+
 function AddSheet({ close, reload, passwords, initialCode = '' }) {
   const [how, setHow] = useState(passwords && !initialCode ? 'new' : 'code')
   const [name, setName] = useState('')
@@ -129,9 +147,9 @@ export function FamilyChild() {
     } catch (e) { toast(e.message) }
   }
   const share = () => useUI.getState().openSheet(() => <CodeSheet child={id} title={`Compartir a ${status?.name}`} />)
-  const unlink = async () => {
-    try { await unlinkChild(id); toast('Ya no eres su tutor'); nav('/family') } catch (e) { toast(e.message) }
-  }
+  const unlink = () => useUI.getState().openSheet(close => <UnlinkSheet name={status.name} close={close} onConfirm={async () => {
+    try { await unlinkChild(id); toast(`Ya no eres tutor de ${status.name}`); nav('/family') } catch (e) { toast(e.message) }
+  }} />)
   if (!status) return null
   return (
     <>
