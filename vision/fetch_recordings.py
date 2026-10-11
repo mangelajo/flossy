@@ -52,7 +52,10 @@ def main():
             with get(f"{base}/ws/recordings/{urllib.parse.quote(r['id'])}.tar", args.key) as resp, \
                     tarfile.open(fileobj=resp, mode="r|") as tar:
                 tar.extractall(tmp, filter="data")
-            shutil.move(Path(tmp) / r["id"], RECORDINGS / r["id"])
+            dest = RECORDINGS / r["id"]
+            if dest.exists():  # restos de una copia a medias (sin meta.json): se sustituyen
+                shutil.rmtree(dest)
+            shutil.move(Path(tmp) / r["id"], dest)
         print("ok")
 
 
