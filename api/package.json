@@ -1,0 +1,15 @@
+{
+  "name": "flossy-api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "server.js",
+  "license": "AGPL-3.0-or-later",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "DATA_DIR=../.dev-data ORIGIN=http://localhost:5173 node --watch server.js"
+  },
+  "dependencies": {
+    "@simplewebauthn/server": "^13.1.1"
+  }
+}

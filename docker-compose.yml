@@ -1,0 +1,40 @@
+name: flossy
+
+services:
+  # Cuentas (passkeys + contraseña) y sesiones guardadas. Node, sin framework.
+  api:
+    build: ./api
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - DATA_DIR=/data
+      - TRUST_PROXY=1
+    volumes:
+      - ./data:/data              # usuarios, passkeys, sesiones, secreto: HAZ COPIA DE ESTO
+
+  # Detección en tiempo real (MediaPipe + clasificador de zonas). Solo CPU.
+  vision:
+    build: ./vision
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - DATA_DIR=/data
+      - FLOSSY_MODELS=/models
+    volumes:
+      - ./data:/data:ro           # solo para verificar la cookie de sesión
+      - ./vision/models:/models:ro  # zones.joblib (reentrénalo con `uv run zones.py`)
+    # Cada sesión activa usa ~1 núcleo a ~10 fps. Ajusta según tu máquina.
+    deploy:
+      resources:
+        limits:
+          cpus: "6"
+          memory: 3g
+
+  web:
+    build:
+      context: .
+      dockerfile: web/Dockerfile
+    restart: unless-stopped
+    depends_on: [api, vision]
+    ports:
+      - "${WEB_PORT:-8080}:8080"

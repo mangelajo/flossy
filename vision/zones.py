@@ -27,6 +27,8 @@ import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import confusion_matrix
 
+import flossy_vision as fv
+
 HERE = Path(__file__).parent
 RECORDINGS = HERE / "data" / "recordings"
 ZONES = ["sup-izq", "sup-front", "sup-der", "inf-izq", "inf-front", "inf-der"]
@@ -102,7 +104,7 @@ def blendshapes(d, frames):
     from mediapipe.tasks.python import BaseOptions, vision
     print(f"  calculando blendshapes de {d.name}…")
     lm = vision.FaceLandmarker.create_from_options(vision.FaceLandmarkerOptions(
-        base_options=BaseOptions(model_asset_path=str(HERE / "models" / "face_landmarker.task")),
+        base_options=BaseOptions(model_asset_path=str(fv.MP_DIR / "face_landmarker.task")),
         running_mode=vision.RunningMode.VIDEO, num_faces=1, output_face_blendshapes=True))
     idx, out = [], []
     for fr in frames:
@@ -285,7 +287,7 @@ def main():
         X, y = np.vstack([X, Xm]), np.concatenate([y, ym])
         models[activity] = RandomForestClassifier(n_estimators=300, min_samples_leaf=5, n_jobs=-1, random_state=0).fit(X, y)
         print(f"\nModelo final {activity}: {len(y)} ventanas · {dict(Counter(y))}")
-    joblib.dump({"models": models, "window_s": WINDOW_S, "blendshapes": USE_BS}, HERE / "models" / "zones.joblib")
+    joblib.dump({"models": models, "window_s": WINDOW_S, "blendshapes": USE_BS}, fv.MODELS / "zones.joblib")
 
 
 if __name__ == "__main__":

@@ -12,9 +12,10 @@ from collections import deque
 import joblib
 import numpy as np
 
+import flossy_vision as fv
 import zones as zn
 
-MODEL_PATH = zn.HERE / "models" / "zones.joblib"
+MODEL_PATH = fv.MODELS / "zones.joblib"
 BRUSH_PER_ZONE = 20.0
 FLOSS_PER_ZONE = 10.0
 SMOOTH_S = 2.0  # media de probabilidades en los últimos ~2 s
@@ -37,6 +38,10 @@ class ZoneModel:
         mtime = MODEL_PATH.stat().st_mtime
         if mtime != self.mtime:
             self.bundle, self.mtime = joblib.load(MODEL_PATH), mtime
+            # Un solo fotograma por llamada: repartirlo entre núcleos cuesta más de lo que ahorra
+            # (26 ms con n_jobs=-1 frente a 7 ms con 1), y en el servidor cada stream ya va en su hilo.
+            for m in self.bundle["models"].values():
+                m.n_jobs = 1
             zn.USE_BS = self.bundle.get("blendshapes", False)
             print(f"Modelo de zonas cargado ({time.ctime(mtime)})")
 

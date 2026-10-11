@@ -8,6 +8,7 @@ Las coordenadas que salen de aquí están en el fotograma SIN espejar, así que 
 de la persona cae a la derecha de la imagen.
 """
 
+import os
 import urllib.request
 from collections import Counter, deque
 from pathlib import Path
@@ -16,9 +17,11 @@ import cv2
 import mediapipe as mp
 import numpy as np
 from mediapipe.tasks.python import BaseOptions, vision
-from ultralytics import YOLO
 
-MODELS = Path(__file__).parent / "models"
+# En Docker los modelos van en un volumen: FLOSSY_MODELS=/models.
+MODELS = Path(os.environ.get("FLOSSY_MODELS", Path(__file__).parent / "models"))
+# Los .task de MediaPipe pueden ir aparte (en la imagen Docker van dentro, no en el volumen).
+MP_DIR = Path(os.environ.get("FLOSSY_MEDIAPIPE", MODELS))
 MP_MODELS = {
     "hand_landmarker.task": "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/latest/hand_landmarker.task",
     "face_landmarker.task": "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/latest/face_landmarker.task",
@@ -41,15 +44,18 @@ ZONES = ("sup-izq", "sup-front", "sup-der", "inf-izq", "inf-front", "inf-der")
 
 
 def ensure_models():
-    MODELS.mkdir(exist_ok=True)
+    MP_DIR.mkdir(parents=True, exist_ok=True)
     for name, url in MP_MODELS.items():
-        path = MODELS / name
+        path = MP_DIR / name
         if not path.exists():
             print(f"Descargando {name}…")
             urllib.request.urlretrieve(url, path)
 
 
 def load_yolo(weights="yolo11n.pt"):
+    # Import tardío: ultralytics (y PyTorch) solo están en el grupo "lab"; la imagen de
+    # producción no los lleva y funciona sin YOLO.
+    from ultralytics import YOLO
     return YOLO(weights)
 
 
@@ -59,10 +65,10 @@ class Landmarkers:
     def __init__(self):
         ensure_models()
         self.hands = vision.HandLandmarker.create_from_options(vision.HandLandmarkerOptions(
-            base_options=BaseOptions(model_asset_path=str(MODELS / "hand_landmarker.task")),
+            base_options=BaseOptions(model_asset_path=str(MP_DIR / "hand_landmarker.task")),
             running_mode=vision.RunningMode.VIDEO, num_hands=2))
         self.face = vision.FaceLandmarker.create_from_options(vision.FaceLandmarkerOptions(
-            base_options=BaseOptions(model_asset_path=str(MODELS / "face_landmarker.task")),
+            base_options=BaseOptions(model_asset_path=str(MP_DIR / "face_landmarker.task")),
             running_mode=vision.RunningMode.VIDEO, num_faces=1,
             output_facial_transformation_matrixes=True, output_face_blendshapes=True))
 
@@ -79,11 +85,13 @@ def detect(frame_bgr, ts_ms, landmarkers, yolo, conf=0.15):
     mp_img = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
     face_res = landmarkers.face.detect_for_video(mp_img, ts_ms)
     hand_res = landmarkers.hands.detect_for_video(mp_img, ts_ms)
-    yolo_res = yolo.predict(frame_bgr, classes=[TOOTHBRUSH], conf=conf, verbose=False)[0]
+    # YOLO es opcional (FLOSSY_YOLO=0): ve poco el cepillo y es casi la mitad del coste por fotograma.
+    yolo_res = yolo.predict(frame_bgr, classes=[TOOTHBRUSH], conf=conf, verbose=False)[0] if yolo else None
 
     mouth = mouth_geometry(face_res.face_landmarks[0], w, h) if face_res.face_landmarks else None
     hands = [np.array([[p.x * w, p.y * h] for p in lm]) for lm in hand_res.hand_landmarks]
-    brushes = [(tuple(b), float(c)) for b, c in zip(yolo_res.boxes.xyxy.cpu().numpy(), yolo_res.boxes.conf.cpu().numpy())]
+    brushes = [] if yolo_res is None else [
+        (tuple(b), float(c)) for b, c in zip(yolo_res.boxes.xyxy.cpu().numpy(), yolo_res.boxes.conf.cpu().numpy())]
 
     raw = {"head_pose": None, "face_pts": None, "hands": [], "blendshapes": None}
     if face_res.face_blendshapes:

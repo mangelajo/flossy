@@ -1,0 +1,66 @@
+/* Estilos propios de flossy, sobre el sistema de diseño de openGym (index.css). */
+
+/* ---- sesión: cámara + overlays ---- */
+.stage{position:relative;border-radius:var(--r-lg);overflow:hidden;background:var(--surface);margin-bottom:12px}
+.stage canvas{display:block;width:100%;height:auto}
+.stage .badge{position:absolute;top:10px;left:10px;padding:6px 12px;border-radius:999px;font-weight:600;font-size:14px;
+  background:rgba(0,0,0,.6);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.stage .badge.brush{color:var(--green)} .stage .badge.floss{color:var(--orange)} .stage .badge.idle{color:var(--grey)}
+.guide{position:absolute;inset:auto 10px 10px 10px;padding:12px 14px;border-radius:var(--r);
+  background:rgba(0,0,0,.72);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:#fff}
+.guide .step{font-size:12px;color:rgba(235,235,245,.6)}
+.guide .count{float:right;margin-left:8px;font-size:40px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums}
+.guide .text{font-size:21px;font-weight:600;margin:2px 0 6px}
+.guide .status{clear:both;font-size:14px;font-weight:600}
+.guide .status.ok{color:var(--green)} .guide .status.warn{color:var(--orange)}
+.stage-empty{aspect-ratio:4/3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--label-2)}
+.stage-empty .icn{font-size:44px}
+
+/* ---- cuadrícula de 6 zonas, como te ves en el espejo ---- */
+.zones{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;margin-top:10px}
+.zone{position:relative;height:34px;border-radius:var(--r-sm);background:var(--surface-2);overflow:hidden;
+  font-size:12px;display:flex;align-items:center;justify-content:center;color:var(--label-2)}
+.zone>i{position:absolute;inset:0;transform-origin:left;transform:scaleX(0);transition:transform .25s var(--ease);opacity:.5}
+.zone>span{position:relative}
+.zone.full{color:var(--label)}
+.zone.target{box-shadow:inset 0 0 0 2px var(--label)}
+.zone.ok{box-shadow:inset 0 0 0 2px var(--green)}
+.zone.warn{box-shadow:inset 0 0 0 2px var(--orange)}
+.zones.brush .zone>i{background:var(--green)}
+.zones.floss .zone>i{background:var(--orange)}
+
+/* ---- calendario de días ---- */
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;max-width:340px;margin:0 auto}
+.cal .h{font-size:11px;color:var(--label-3);text-align:center}
+.cal .d{aspect-ratio:1;border-radius:7px;background:var(--surface-2);display:flex;align-items:center;justify-content:center;
+  font-size:11px;color:var(--label-3);position:relative}
+.cal .d.l1{background:color-mix(in srgb,var(--green) 35%,var(--surface-2));color:var(--label)}
+.cal .d.l2{background:var(--green);color:#000;font-weight:600}
+.cal .d.today{box-shadow:inset 0 0 0 1.5px var(--label)}
+.cal .d.miss{background:color-mix(in srgb,var(--red) 22%,var(--surface-2))}
+.cal .d.out{visibility:hidden}
+
+.big-start{display:flex;flex-direction:column;align-items:center;gap:6px;padding:22px;border-radius:var(--r-xl);
+  background:var(--acc);color:var(--on-acc);font-size:20px;font-weight:600;width:100%;border:0}
+.big-start .icn{font-size:40px;--icon-stroke:2}
+.big-start:active{transform:scale(.985)}
+
+/* ---- horario ---- */
+.daypick{display:flex;gap:6px;justify-content:space-between}
+.daypick button{flex:1;height:38px;border-radius:var(--r-sm);border:0;background:var(--surface-2);color:var(--label-2);font-weight:600}
+.daypick button.on{background:var(--acc);color:var(--on-acc)}
+.timerow{display:flex;gap:10px}
+.timerow label{flex:1;font-size:13px;color:var(--label-2)}
+.timerow input{margin-top:4px}
+.secret{font:13px ui-monospace,monospace;word-break:break-all;background:var(--surface-2);border-radius:var(--r-sm);padding:10px;user-select:all}
+pre.snippet{font:12px ui-monospace,monospace;white-space:pre-wrap;word-break:break-all;background:var(--surface-2);border-radius:var(--r-sm);padding:10px;color:var(--label-2)}
+.kid{display:block;width:100%;text-align:start}
+.kid .top{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.kid .name{font-size:19px;font-weight:600;flex:1}
+.pill{font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px}
+.pill.ok{background:color-mix(in srgb,var(--green) 18%,transparent);color:var(--green)}
+.pill.bad{background:color-mix(in srgb,var(--red) 18%,transparent);color:var(--red)}
+.pill.wait{background:color-mix(in srgb,var(--orange) 18%,transparent);color:var(--orange)}
+.dots{display:flex;gap:6px;flex-wrap:wrap}
+.dots span{font-size:12px;padding:3px 8px;border-radius:7px;background:var(--surface-2);color:var(--label-2)}
+.dots span.done{color:var(--green)} .dots span.missed{color:var(--red)} .dots span.open{color:var(--orange)}

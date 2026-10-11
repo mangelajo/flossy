@@ -1,9 +1,15 @@
-experiments/models/
+vision/models/
 *.pt
 .venv/
 __pycache__/
 *.mp4
 *.csv
-experiments/data/
+vision/data/
 .DS_Store
 *.pem
+data/
+.dev-data/
+.env
+frontend/dist/
+node_modules/
+*.swp
