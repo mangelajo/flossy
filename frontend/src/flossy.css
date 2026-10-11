@@ -64,3 +64,10 @@ pre.snippet{font:12px ui-monospace,monospace;white-space:pre-wrap;word-break:bre
 .dots{display:flex;gap:6px;flex-wrap:wrap}
 .dots span{font-size:12px;padding:3px 8px;border-radius:7px;background:var(--surface-2);color:var(--label-2)}
 .dots span.done{color:var(--green)} .dots span.missed{color:var(--red)} .dots span.open{color:var(--orange)}
+
+/* código para compartir (invitaciones, tutores) */
+.sharecode{display:flex;align-items:center;justify-content:center;gap:10px;padding:8px 0 16px}
+.sharecode span{font-size:34px;font-weight:700;letter-spacing:.18em;font-variant-numeric:tabular-nums}
+.sharecode .copy{border:0;background:var(--acc-soft);color:var(--acc);width:40px;height:40px;
+  border-radius:12px;display:grid;place-items:center;font-size:20px;cursor:pointer}
+.sharecode .copy:active{opacity:.6}

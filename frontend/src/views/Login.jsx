@@ -1,6 +1,7 @@
 // Inicio de sesión y alta de perfil. Mismo planteamiento que openGym: passkey primero,
 // contraseña como alternativa (dispositivos sin passkeys, tablets de los niños…).
 import { useEffect, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useAuth } from '../store/useAuth.js'
 import { useUI, toast } from '../store/useUI.js'
 import { webauthnOK, passkeyLogin, passkeyRegister, passwordLogin, passwordRegister, bio, cancelled } from '../lib/api.js'
@@ -20,14 +21,14 @@ function useFocus() {
   return ref
 }
 
-function RegisterSheet({ close }) {
+function RegisterSheet({ close, invite = '' }) {
   const { config, setUser } = useAuth()
   const pwOn = !!config?.password_login
   const inviteOnly = !!config?.invite_only
   const [how, setHow] = useState(webauthnOK() ? 'passkey' : 'password')
   const [name, setName] = useState('')
   const [password, setPassword] = useState('')
-  const [code, setCode] = useState('')
+  const [code, setCode] = useState(invite)
   const [busy, setBusy] = useState(false)
   const ref = useFocus()
 
@@ -62,7 +63,7 @@ function RegisterSheet({ close }) {
       <input className="input" type="password" placeholder="Contraseña" autoComplete="new-password" value={password}
         onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === 'Enter' && go()} />
     </>}
-    {inviteOnly && <>
+    {(inviteOnly || invite) && <>
       <div style={{ height: 10 }} />
       <input className="input" placeholder="Código de invitación" maxLength={40} value={code}
         onChange={e => setCode(e.target.value.toUpperCase())} style={{ letterSpacing: '.14em', fontWeight: 600, textAlign: 'center' }} />
@@ -99,7 +100,11 @@ function PasswordSheet({ close }) {
 export default function Login() {
   const { config, setUser } = useAuth()
   const pwOn = !!config?.password_login
-  const open = Sheet => useUI.getState().openSheet(close => <Sheet close={close} />)
+  const open = (Sheet, props) => useUI.getState().openSheet(close => <Sheet close={close} {...props} />)
+  // Enlace de invitación (#/login?invite=…): abre «Crear perfil» con el código puesto.
+  const [params] = useSearchParams()
+  const invite = (params.get('invite') || '').toUpperCase()
+  useEffect(() => { if (invite) open(RegisterSheet, { invite }) }, [invite])
   const signIn = async () => {
     try { const u = await passkeyLogin(); setUser(u); toast(`¡Hola, ${u.name}!`) }
     catch (e) { if (!cancelled(e)) toast(errorText(e, 'No se pudo entrar')) }
@@ -119,7 +124,7 @@ export default function Login() {
         <Button variant={webauthnOK() ? 'plain' : 'primary'} icon="key" onClick={() => open(PasswordSheet)}>Entrar con contraseña</Button>
         <div style={{ height: 10 }} />
       </>}
-      {(webauthnOK() || pwOn) && <Button icon="plusCircle" onClick={() => open(RegisterSheet)}>Crear perfil</Button>}
+      {(webauthnOK() || pwOn) && <Button icon="plusCircle" onClick={() => open(RegisterSheet, { invite })}>Crear perfil</Button>}
       {!webauthnOK() && !pwOn && <div className="card small muted" style={{ textAlign: 'start' }}>
         Este navegador no admite passkeys y el servidor no tiene activado el acceso con contraseña.
       </div>}

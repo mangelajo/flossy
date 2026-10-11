@@ -6,6 +6,7 @@ import { logoutAll, adminUsers, adminInvites, createInvite, revokeInvite, listKe
 import { fmtWhen } from '../lib/stats.js'
 import { Section, Row, Button } from '../components/ui.jsx'
 import { CodeSheet } from './Family.jsx'
+import ShareCode from '../components/ShareCode.jsx'
 
 function NewKeySheet({ reload }) {
   const [name, setName] = useState('')
@@ -55,6 +56,21 @@ function ApiKeys() {
   )
 }
 
+function InviteSheet({ invite, close, reload }) {
+  const revoke = async () => {
+    try { await revokeInvite(invite.code); toast('Invitación revocada'); close(); reload() } catch (e) { toast(e.message) }
+  }
+  return <>
+    <h3>Invitación</h3>
+    <div className="muted small" style={{ marginBottom: 14 }}>
+      {invite.usedBy ? 'Ya se ha usado.' : 'Mándale el enlace: abre flossy con el código puesto para crear su perfil. Sirve para un perfil.'}
+    </div>
+    <ShareCode code={invite.code} link={`/login?invite=${invite.code}`} text="Te invito a flossy, para el cepillado y la seda dental:" />
+    <div style={{ height: 8 }} />
+    <Button variant="danger" icon="trash" onClick={revoke}>Revocar</Button>
+  </>
+}
+
 function Admin() {
   const [users, setUsers] = useState(null)
   const [inv, setInv] = useState(null)
@@ -63,19 +79,19 @@ function Admin() {
     adminInvites().then(setInv).catch(e => toast(e.message))
   }
   useEffect(load, [])
+  const openInvite = invite => useUI.getState().openSheet(close => <InviteSheet invite={invite} close={close} reload={load} />)
   const newInvite = async () => {
-    try { const i = await createInvite(''); toast(`Código: ${i.code}`); load() } catch (e) { toast(e.message) }
+    try { const i = await createInvite(''); load(); openInvite(i) } catch (e) { toast(e.message) }
   }
-  const revoke = async code => { try { await revokeInvite(code); load() } catch (e) { toast(e.message) } }
   return <>
     <Section title="Perfiles" footer="Cada persona crea su perfil desde su dispositivo (passkey o contraseña).">
       {(users || []).map(u => <Row key={u.id} icon="person" title={u.name + (u.admin ? ' · admin' : '')}
         subtitle={`${u.sessions} sesiones${u.last ? ' · última ' + fmtWhen(u.last) : ''} · ${u.passkeys} passkey${u.passkeys === 1 ? '' : 's'}${u.password ? ' · contraseña' : ''}`} />)}
     </Section>
     <Section title="Invitaciones"
-      footer={inv?.invite_only ? 'Para crear un perfil hace falta un código. Toca uno para revocarlo.' : 'Los códigos solo se piden si el servidor tiene INVITE_ONLY=1.'}>
+      footer={inv?.invite_only ? 'Para crear un perfil hace falta un código. Toca uno para compartirlo o revocarlo.' : 'Los códigos solo se piden si el servidor tiene INVITE_ONLY=1.'}>
       {(inv?.invites || []).map(i => <Row key={i.code} icon="key" title={i.code} subtitle={i.usedBy ? 'usado' : 'sin usar'}
-        value="Revocar" onClick={() => revoke(i.code)} />)}
+        accessory="chevron" onClick={() => openInvite(i)} />)}
       <Row icon="plusCircle" title="Nuevo código de invitación" onClick={newInvite} />
     </Section>
   </>

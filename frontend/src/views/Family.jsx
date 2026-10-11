@@ -1,6 +1,6 @@
 // Familia: los tutores (padre, madre…) ven cómo van los niños hoy, su historial y su horario.
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../store/useAuth.js'
 import { useUI, toast } from '../store/useUI.js'
 import { getFamily, createChild, familyCode, redeemFamilyCode, unlinkChild, getStatus, userSessions } from '../lib/api.js'
@@ -8,6 +8,7 @@ import Icon from '../components/Icon.jsx'
 import { Button, Section, Row, Segmented } from '../components/ui.jsx'
 import { SlotList } from '../components/Slots.jsx'
 import { PersonHistory } from './History.jsx'
+import ShareCode from '../components/ShareCode.jsx'
 
 function verdict(p) {
   if (p.missed_today) return ['bad', `${p.missed_today} sin hacer`]
@@ -22,17 +23,18 @@ function CodeSheet({ child, title }) {
   return <>
     <h3>{title}</h3>
     <div className="muted small" style={{ marginBottom: 14 }}>
-      La otra persona va a Familia → Añadir → «Tengo un código» y lo escribe. Sirve una sola vez y caduca en 15 minutos.
+      Mándale el enlace a la otra persona, o que vaya a Familia → Añadir → «Tengo un código» y lo escriba.
+      Sirve una sola vez y caduca en 15 minutos.
     </div>
-    <div style={{ fontSize: 34, fontWeight: 700, letterSpacing: '.18em', textAlign: 'center', padding: '10px 0' }}>{code?.code || '…'}</div>
+    <ShareCode code={code?.code} link={`/family?code=${code?.code}`} text="Vincúlate en flossy para ver cómo van los dientes:" />
   </>
 }
 
-function AddSheet({ close, reload, passwords }) {
-  const [how, setHow] = useState(passwords ? 'new' : 'code')
+function AddSheet({ close, reload, passwords, initialCode = '' }) {
+  const [how, setHow] = useState(passwords && !initialCode ? 'new' : 'code')
   const [name, setName] = useState('')
   const [password, setPassword] = useState('')
-  const [code, setCode] = useState('')
+  const [code, setCode] = useState(initialCode)
   const go = async () => {
     try {
       const c = how === 'new' ? await createChild(name.trim(), password) : await redeemFamilyCode(code.trim())
@@ -65,15 +67,22 @@ export default function Family() {
   const nav = useNavigate()
   const config = useAuth(s => s.config)
   const [data, setData] = useState(null)
+  const [params] = useSearchParams()
   const load = () => getFamily().then(setData).catch(e => toast(e.message))
-  useEffect(() => { load() }, [])
-  const add = () => useUI.getState().openSheet(close => <AddSheet close={close} reload={load} passwords={!!config?.password_login} />)
+  const add = (initialCode = '') => useUI.getState().openSheet(close =>
+    <AddSheet close={close} reload={load} passwords={!!config?.password_login} initialCode={initialCode} />)
+  useEffect(() => {
+    load()
+    // Enlace compartido (#/family?code=…): abre «Vincular» con el código ya puesto.
+    const code = params.get('code')
+    if (code) { nav('/family', { replace: true }); add(code.toUpperCase()) }
+  }, [])
 
   return (
     <>
       <div className="hdr">
         <div><h1>Familia</h1><div className="sub">Cómo van hoy</div></div>
-        <Button size="sm" variant="tinted" icon="plus" onClick={add}>Añadir</Button>
+        <Button size="sm" variant="tinted" icon="plus" onClick={() => add()}>Añadir</Button>
       </div>
       {data && !data.children.length && <div className="empty">
         <div className="ico"><Icon name="person" /></div>
