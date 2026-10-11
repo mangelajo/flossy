@@ -70,15 +70,27 @@ export function indexSessions(sessions, tz) {
   return byDate;
 }
 
-/** Estado de cada franja de un día: done | upcoming | open | missed. */
-export function slotsForDay(schedule, byDate, isoDate, today) {
+/** Estado de cada franja de un día: done | upcoming | open | missed. Las franjas que terminaron
+    antes de `since` (cuando se creó el perfil) no cuentan. */
+export function slotsForDay(schedule, byDate, isoDate, today, since = null) {
   const wd = weekdayOf(isoDate);
   const daySessions = byDate.get(isoDate) || [];
   const used = new Set();
-  return (schedule || []).filter(slot => slot.days.includes(wd)).map(slot => {
+  const existed = slot => !since || isoDate > since.date || (isoDate === since.date && minutes(slot.end) >= since.minutes);
+  return (schedule || []).filter(slot => slot.days.includes(wd) && existed(slot)).map(slot => {
     const a = minutes(slot.start), b = minutes(slot.end);
-    // Cada sesión cuenta para una sola franja (por si se solapan).
-    const hit = daySessions.find(x => !used.has(x.s.id) && x.minutes >= a && x.minutes <= b && satisfies(x.s, slot.mode));
+    // Cada sesión cuenta para una sola franja (por si se solapan). Para "los dos" se suman las
+    // sesiones de la franja: es normal cepillarse y pasar la seda en sesiones separadas.
+    const inSlot = daySessions.filter(x => !used.has(x.s.id) && x.minutes >= a && x.minutes <= b);
+    let hit = inSlot.find(x => satisfies(x.s, slot.mode));
+    if (!hit && slot.mode === 'both' && inSlot.length > 1) {
+      const sum = { brush_s: 0, floss_s: 0 };
+      for (const x of inSlot) { sum.brush_s += x.s.brush_s || 0; sum.floss_s += x.s.floss_s || 0; }
+      if (satisfies(sum, 'both')) {
+        inSlot.forEach(x => used.add(x.s.id));
+        hit = inSlot[0];
+      }
+    }
     if (hit) used.add(hit.s.id);
     let status;
     if (hit) status = 'done';
@@ -96,7 +108,8 @@ export function personStatus(user, sessions, { days = 0, now = new Date() } = {}
   const today = localParts(now, tz);
   const schedule = user.schedule || DEFAULT_SCHEDULE;
   const byDate = indexSessions(sessions, tz);
-  const forDay = d => slotsForDay(schedule, byDate, d, today);
+  const since = user.created ? localParts(new Date(user.created), tz) : null;
+  const forDay = d => slotsForDay(schedule, byDate, d, today, since);
   const slots = forDay(today.date);
   const count = st => slots.filter(s => s.status === st).length;
 
@@ -109,7 +122,7 @@ export function personStatus(user, sessions, { days = 0, now = new Date() } = {}
   // Racha: días seguidos con todas sus franjas hechas. Hoy cuenta solo si ya está completo (si
   // no, aún puede completarse y no rompe nada); un día sin franjas ni suma ni corta.
   let streak = 0;
-  for (let i = 0, d = today.date; i < 400; i++, d = addDays(d, -1)) {
+  for (let i = 0, d = today.date; i < 400 && (!since || d >= since.date); i++, d = addDays(d, -1)) {
     const list = forDay(d);
     if (!list.length) continue;
     if (list.every(s => s.status === 'done')) streak++;

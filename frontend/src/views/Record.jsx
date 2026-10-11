@@ -1,11 +1,12 @@
 // Grabaciones para entrenar el detector de zonas. La app pide cada zona según un protocolo
 // (vision/protocol.py) y el servidor guarda cada fotograma etiquetado con lo que tocaba. No
-// mide nada: es material para reentrenar (vision/fetch_recordings.py + zones.py).
+// mide nada: es material para reentrenar (vision/fetch_recordings.py + zones.py). Como sí se
+// cepilla y se pasa la seda, al terminar se guarda también como sesión (cuenta para el horario).
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../store/useAuth.js'
 import { useUI, toast } from '../store/useUI.js'
-import { listRecordings, deleteRecording, recordingUrl, adminUsers, setRecorder } from '../lib/api.js'
+import { listRecordings, deleteRecording, recordingUrl, adminUsers, setRecorder, saveSession } from '../lib/api.js'
 import { say, beep, openCamera, startStream, stopStream } from '../lib/camera.js'
 import Icon from '../components/Icon.jsx'
 import { Button, Section, Row, Segmented, Switch } from '../components/ui.jsx'
@@ -17,6 +18,8 @@ const PROTOCOLS = [
   { value: 'completo', label: 'Los dos', secs: 200 },
   { value: 'prueba', label: 'Prueba', secs: 11 }
 ]
+const MODE = { cepillado: 'brush', seda: 'floss', completo: 'both', prueba: 'both' }
+const ZONE_IDS = ['sup-izq', 'sup-front', 'sup-der', 'inf-izq', 'inf-front', 'inf-der']
 const fmtMB = b => b >= 1e6 ? `${(b / 1e6).toFixed(0)} MB` : `${Math.ceil(b / 1e3)} KB`
 const fmtStamp = s => s ? `${s.slice(6, 8)}/${s.slice(4, 6)} ${s.slice(9, 11)}:${s.slice(11, 13)}` : ''
 
@@ -33,18 +36,40 @@ export default function Record() {
   const rt = useRef({}).current
   useEffect(() => () => stopStream(rt), [])
 
+  // Segundos grabados de cada paso (para la sesión): lo transcurrido del paso según el guion.
+  const track = g => {
+    if (g.activity === 'brush' || g.activity === 'floss') rt.done[g.step] = { activity: g.activity, zone: g.zone, secs: g.duration - g.remaining }
+  }
+  const persist = async completed => {
+    if (rt.saved) return
+    rt.saved = true
+    const secs = { brush: 0, floss: 0 }, zones = { brush: {}, floss: {} }
+    for (const { activity, zone, secs: t } of Object.values(rt.done)) {
+      secs[activity] += t
+      zones[activity][zone] = Math.min(1, (zones[activity][zone] || 0) + t / 20 * (activity === 'floss' ? 2 : 1))
+    }
+    if (secs.brush + secs.floss < 5) return
+    const full = z => Object.fromEntries(ZONE_IDS.map(id => [id, z[id] || 0]))
+    try {
+      await saveSession({ started: rt.startedAt, mode: MODE[protocol], brush_s: Math.round(secs.brush), floss_s: Math.round(secs.floss),
+        brush_zones: full(zones.brush), floss_zones: full(zones.floss), completed })
+      toast('Grabación guardada y contada como sesión')
+    } catch (e) { toast('No se pudo guardar la sesión: ' + e.message) }
+  }
+
   const stop = () => {
     rt.ws?.readyState === 1 && rt.ws.send(JSON.stringify({ type: 'stop' }))
     stopStream(rt)
     setResult({ id: rt.guide?.id, frames: rt.guide?.frames, complete: false })
     setPhase('done')
+    persist(false)
   }
 
   const start = async () => {
     say('Prepárate'); beep(660)  // desbloquea voz y sonido con el toque (iOS)
     setError(''); setGuide(null); setResult(null)
     try { rt.video = await openCamera() } catch (e) { setError(e.message); return }
-    rt.step = -1; rt.guide = null
+    Object.assign(rt, { step: -1, guide: null, done: {}, saved: false, startedAt: new Date().toISOString() })
     await startStream(rt, canvasRef.current, {
       onOpen: ws => { ws.send(JSON.stringify({ type: 'record', protocol, hand })); setPhase('running') },
       onError: msg => { setError(msg); stopStream(rt); setPhase('ready') },
@@ -52,6 +77,7 @@ export default function Record() {
         setError(e.code === 4401 ? 'Tu sesión ha caducado: vuelve a entrar.' : 'Se ha perdido la conexión: se guarda lo grabado hasta ahora.')
         setResult({ id: rt.guide?.id, frames: rt.guide?.frames, complete: false })
         setPhase('done')
+        persist(false)
       },
       onMessage: msg => {
         const g = msg.guide
@@ -61,9 +87,11 @@ export default function Record() {
           stopStream(rt)
           setResult({ id: g.id, frames: g.frames, complete: true })
           setPhase('done')
+          persist(true)
           return false
         }
         rt.guide = g
+        track(g)
         setGuide(g)
         if (g.step !== rt.step) { rt.step = g.step; beep(880); say(g.text) }
       }
@@ -106,6 +134,7 @@ export default function Record() {
         <div className="dim small" style={{ marginTop: 14, textAlign: 'center' }}>
           La app te dirá en voz alta qué zona hacer y cuándo cambiar. Se guardan los fotogramas de la
           cámara en el servidor para reentrenar el detector; solo los administradores pueden verlos.
+          También cuenta como sesión de cepillado o seda.
         </div>
       </>}
       {phase === 'done' && <>
