@@ -1,5 +1,7 @@
 # flossy
 
+**English** · [Español](README.es.md)
+
 A mobile web app that guides tooth brushing and flossing with the phone camera. It asks for each
 zone in turn (upper/lower × left/center/right), and a zone's bar only fills while the system
 confirms you are actually working on it. Everyone at home gets their own profile and history.
