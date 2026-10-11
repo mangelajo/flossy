@@ -1,155 +1,159 @@
 # flossy
 
-Web app para el móvil que guía el cepillado y la seda dental con la cámara: te pide cada zona
-(arriba/abajo × izquierda/centro/derecha) y su barra solo sube mientras el sistema confirma que
-estás en ella. Cada persona de la casa tiene su perfil e historial.
+A mobile web app that guides tooth brushing and flossing with the phone camera. It asks for each
+zone in turn (upper/lower × left/center/right), and a zone's bar only fills while the system
+confirms you are actually working on it. Everyone at home gets their own profile and history.
+
+The app's interface is in Spanish for now; menu names below are given in Spanish with a translation.
 
 <table>
   <tr>
-    <td align="center"><img src="docs/screenshots/sesion.png" width="240" alt="Sesión guiada: la app pide cada zona y su barra sube mientras te ve cepillando en ella"><br><sub><b>Sesión guiada</b>: zona a zona, con voz</sub></td>
-    <td align="center"><img src="docs/screenshots/inicio.png" width="240" alt="Inicio: sesiones de hoy, racha y botón para empezar"><br><sub><b>Inicio</b>: lo que toca hoy y la racha</sub></td>
-    <td align="center"><img src="docs/screenshots/familia.png" width="240" alt="Familia: cómo van los niños hoy"><br><sub><b>Familia</b>: cómo van los niños</sub></td>
+    <td align="center"><img src="docs/screenshots/sesion.png" width="240" alt="Guided session: the app asks for each zone and its bar fills while it sees you brushing there"><br><sub><b>Guided session</b>: zone by zone, with voice prompts</sub></td>
+    <td align="center"><img src="docs/screenshots/inicio.png" width="240" alt="Home: today's sessions, streak and start button"><br><sub><b>Home</b>: what's due today and your streak</sub></td>
+    <td align="center"><img src="docs/screenshots/familia.png" width="240" alt="Family: how the kids are doing today"><br><sub><b>Family</b>: how the kids are doing</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src="docs/screenshots/nino.png" width="240" alt="Ficha de un niño: sesiones de hoy, horario y calendario"><br><sub><b>Ficha del niño</b>: hoy y su calendario</sub></td>
-    <td align="center"><img src="docs/screenshots/historial.png" width="240" alt="Historial: calendario de las últimas semanas y sesiones"><br><sub><b>Historial</b>: las últimas 6 semanas</sub></td>
-    <td align="center"><img src="docs/screenshots/horario.png" width="240" alt="Horario: sesiones programadas con su franja horaria"><br><sub><b>Horario</b>: una, dos o las sesiones que quieras</sub></td>
+    <td align="center"><img src="docs/screenshots/nino.png" width="240" alt="Child page: today's sessions, schedule and calendar"><br><sub><b>Child page</b>: today and their calendar</sub></td>
+    <td align="center"><img src="docs/screenshots/historial.png" width="240" alt="History: calendar of the last weeks and sessions"><br><sub><b>History</b>: the last 6 weeks</sub></td>
+    <td align="center"><img src="docs/screenshots/horario.png" width="240" alt="Schedule: planned sessions with their time windows"><br><sub><b>Schedule</b>: one, two or as many sessions as you like</sub></td>
   </tr>
 </table>
 
-<sub>Capturas con datos de demostración.</sub>
+<sub>Screenshots use demo data.</sub>
 
-## Estructura
+## Layout
 
-| Carpeta | Qué es |
+| Folder | What it is |
 |---|---|
-| `frontend/` | React + Vite. Diseño, componentes y login adaptados de [openGym](https://github.com/DuarteSantos8/openGym). |
-| `api/` | Node sin framework: perfiles (passkeys + contraseña), cookie de sesión, historial. JSON en `data/`. |
-| `vision/` | Python: detección en tiempo real por WebSocket (`app.py`) y el laboratorio para grabar, analizar y entrenar (`server.py`, `analyze.py`, `zones.py`). |
-| `web/` | nginx: sirve la app y reenvía `/api` y `/ws` en el mismo origen. |
+| `frontend/` | React + Vite. Design, components and login adapted from [openGym](https://github.com/DuarteSantos8/openGym). |
+| `api/` | Node, no framework: profiles (passkeys + password), session cookie, history, schedules, family, API keys. JSON files in `data/`. |
+| `vision/` | Python: real-time detection over a WebSocket (`app.py`), plus the lab for recording, analysing and training (`server.py`, `analyze.py`, `zones.py`). |
+| `web/` | nginx: serves the app and proxies `/api` and `/ws` on the same origin. |
 
 ```
-móvil ──HTTPS──▶ nginx ──/api──▶ api (Node)     ── data/ (usuarios, sesiones, secreto)
-                       └─/ws───▶ vision (Python) ── lee data/secret + db.json para validar la cookie
-                                                  └─ models/zones.joblib (clasificador de zonas)
+phone ──HTTPS──▶ nginx ──/api──▶ api (Node)      ── data/ (users, sessions, secret)
+                       └─/ws───▶ vision (Python) ── reads data/secret + db.json to validate the cookie
+                                                  └─ models/zones.joblib (zone classifier)
 ```
 
-## Horarios, familia y API
+## Schedules, family and API
 
-- **Horario**: cada perfil tiene sesiones programadas (franjas): nombre, hora de inicio y fin,
-  días de la semana y qué toca (cepillado, seda o los dos). Una franja se cumple si dentro de ella
-  se hace una sesión completa de ese tipo. Por defecto: mañana (07:00–10:00, cepillado) y noche
-  (20:00–23:00, cepillado + seda). El estado se calcula en el servidor, en la zona horaria del
-  navegador de cada persona.
-- **Familia**: un tutor crea el perfil de un niño (nombre + contraseña) o se vincula a uno
-  existente con un código de un solo uso (15 min) que genera el niño o el otro tutor. Los tutores
-  ven el estado y el historial del niño y gestionan su horario; el niño ya no puede cambiarlo.
-- **API de solo lectura** para domótica: claves creadas en Ajustes → Claves de API. Una clave
-  ve a su dueño y a los niños de los que es tutor.
+- **Schedule**: each profile has planned sessions (time windows): a name, start and end time, days
+  of the week and what's due (brushing, floss or both). A window counts as done when the sessions
+  started inside it reach the goal for that mode; brushing and flossing can be separate sessions.
+  Default: morning (07:00–10:00, brushing) and night (20:00–23:00, brushing + floss). Status is
+  computed on the server, in each person's browser time zone. Windows that ended before the
+  profile was created don't count as missed.
+- **Family**: a guardian creates a child's profile (name + password), or links to an existing one
+  with a one-time code (valid 15 min) generated by the child or by the other guardian. Codes can be
+  copied or shared as a link. Guardians see the child's status and history and manage their
+  schedule; the child can no longer change it.
+- **Read-only API** for home automation: keys are created in *Ajustes → Claves de API* (Settings →
+  API keys). A key sees its owner and the children they are a guardian of.
 
 ```bash
-curl -H "Authorization: Bearer flossy_…" https://flossy.example.com/api/v1/status          # todos
-curl -H "X-API-Key: flossy_…"            https://flossy.example.com/api/v1/status/lucia    # una persona
+curl -H "Authorization: Bearer flossy_…" https://flossy.example.com/api/v1/status          # everyone
+curl -H "X-API-Key: flossy_…"            https://flossy.example.com/api/v1/status/lucia    # one person
 ```
 
 ```jsonc
 { "id": "…", "name": "Lucía", "tz": "Europe/Madrid", "date": "2026-10-11",
-  "ok": false,                       // false si hoy alguna franja ya pasó sin hacerse
+  "ok": false,                       // false if any window today has already passed without being done
   "open_now": 0, "missed_today": 1, "done_today": 1, "total_today": 2,
   "slots": [ { "id": "manana", "name": "Mañana", "start": "07:00", "end": "10:00", "mode": "brush", "status": "done" },
              { "id": "noche",  "name": "Noche",  "start": "20:00", "end": "23:00", "mode": "both",  "status": "missed" } ],
   "streak": 4 }
 ```
 
-`status` de cada franja: `done`, `open` (ahora es su hora), `upcoming` o `missed`. Ejemplo en Home
-Assistant: un sensor REST con `value_template: "{{ value_json.ok }}"` y una automatización que
-apague la tele cuando pase a `false`.
+Each window's `status` is `done`, `open` (it's due right now), `upcoming` or `missed`. Home
+Assistant example: a REST sensor with `value_template: "{{ value_json.ok }}"` and an automation
+that turns off the TV when it becomes `false`.
 
-## Grabaciones para entrenar
+## Training recordings
 
-Desde la app (Ajustes → Grabar para entrenar) se graba siguiendo un protocolo: la app dice en voz
-alta qué zona hacer y el servidor guarda cada fotograma etiquetado en `RECORDINGS_DIR` (volumen
-`recordings/`), con el mismo formato que el laboratorio. Pueden grabar los administradores y los
-perfiles a los que un administrador se lo active (Ajustes → Grabaciones).
+From the app (*Ajustes → Grabar para entrenar*, Settings → Record for training) you record by
+following a protocol: the app says out loud which zone to do, and the server stores every labelled
+frame in `RECORDINGS_DIR` (the `recordings/` volume), in the same format as the lab. A recording
+also counts as a brushing/floss session. Admins can always record, and an admin can enable it for
+other profiles (*Ajustes → Grabaciones*, Settings → Recordings).
 
-Para entrenar en local (o simplemente `make train`, ver más abajo), con una clave de API de un
-administrador:
+To train locally (or just `make train`, see below), with an admin's API key:
 
 ```bash
 cd vision
-FLOSSY_KEY=flossy_… uv run fetch_recordings.py https://flossy.example.com   # baja las nuevas a data/recordings/
-uv run analyze.py        # revisarlas
-uv run zones.py          # reentrenar -> models/zones.joblib; commit + push y CI publica la imagen
+FLOSSY_KEY=flossy_… uv run fetch_recordings.py https://flossy.example.com   # downloads new ones to data/recordings/
+uv run analyze.py        # review them
+uv run zones.py          # retrain -> models/zones.joblib; commit + push and CI publishes the image
 ```
 
-API (solo administradores, cookie o `Authorization: Bearer <clave>`): `GET /ws/recordings` (lista),
-`GET /ws/recordings/{id}.tar` (descarga), `DELETE /ws/recordings/{id}`.
+API (admins only, session cookie or `Authorization: Bearer <key>`): `GET /ws/recordings` (list),
+`GET /ws/recordings/{id}.tar` (download), `DELETE /ws/recordings/{id}`.
 
-## Requisitos del servidor
+## Server requirements
 
-**No hace falta GPU.** Todo corre en CPU:
+**No GPU needed.** Everything runs on the CPU:
 
-- Por fotograma (480×360): MediaPipe manos ~33 ms + cara ~10 ms + clasificador de zonas ~7 ms
-  ≈ **50 ms de un núcleo** (medido en un M1 Max). A ~10 fps, **cada sesión activa usa ~0,5–1 núcleo**.
-- Un Ryzen 9 de 16 núcleos aguanta de sobra varias sesiones a la vez (la familia entera cepillándose
-  a la vez y sobra máquina).
-- RAM: ~0,5 GB el servicio de visión + ~0,3 GB por sesión activa; la API y nginx, casi nada.
-- Red: ~25 KB por fotograma ≈ **2 Mbit/s por sesión** de subida desde el móvil. Mejor en la wifi de casa.
-- Disco: mínimo. Las sesiones guardadas son unos cientos de bytes cada una.
-- **HTTPS obligatorio**: el navegador del móvil no deja usar la cámara ni las passkeys sin él.
-  Pon flossy detrás de Caddy, Traefik, Cloudflare Tunnel, Tailscale Serve…
+- Per frame (480×360): MediaPipe hands ~33 ms + face ~10 ms + zone classifier ~7 ms
+  ≈ **50 ms of one core** (measured on an M1 Max). At ~10 fps, **each active session uses ~0.5–1 core**.
+- A 16-core Ryzen 9 handles several sessions at once with room to spare (the whole family brushing
+  at the same time and the machine is still mostly idle).
+- RAM: ~0.5 GB for the vision service + ~0.3 GB per active session; the API and nginx, almost nothing.
+- Network: ~25 KB per frame ≈ **2 Mbit/s upload per session** from the phone. Best on home Wi-Fi.
+- Disk: minimal. Saved sessions are a few hundred bytes each; training recordings are 10–50 MB each.
+- **HTTPS is required**: mobile browsers won't allow the camera or passkeys without it.
+  Put flossy behind Caddy, Traefik, Cloudflare Tunnel, Tailscale Serve…
 
-YOLO (detector del cepillo) queda fuera de la imagen de producción: casi nunca ve el cepillo
-(lo tapa la mano) y costaba otros ~40 ms por fotograma y ~2 GB de PyTorch. Sigue disponible en el
-laboratorio.
+YOLO (toothbrush detector) is left out of the production image: it almost never sees the brush
+(the hand covers it) and cost another ~40 ms per frame and ~2 GB of PyTorch. It's still available
+in the lab.
 
-## Probarlo con Docker
+## Try it with Docker
 
-Con las imágenes ya publicadas en ghcr.io, sin compilar nada ni configurar nada:
+Using the images already published on ghcr.io, with nothing to build or configure:
 
 ```bash
 curl -O https://raw.githubusercontent.com/mangelajo/flossy/main/docker-compose.yml
-docker compose up -d              # http://localhost:8080 en esta misma máquina
+docker compose up -d              # http://localhost:8080 on this same machine
 ```
 
-El primer perfil que se crea es administrador. Los datos quedan en `data/` (haz copia) y las
-grabaciones para entrenar en `recordings/`. Funciona igual con Podman (`podman compose`).
+The first profile created becomes the admin. Data lives in `data/` (back it up) and training
+recordings in `recordings/`. Works the same with Podman (`podman compose`).
 
-- **Desde el móvil en la red de casa:** `docker compose --profile https up -d` añade HTTPS con un
-  certificado autofirmado en el puerto 8443. Pon en `.env` `ORIGIN=https://<ip>:8443` y
-  `RP_ID=<ip>`, y acepta el aviso del certificado en el móvil. Las passkeys no funcionan con un
-  certificado así: entra con contraseña.
-- **Despliegue de verdad:** detrás de un proxy con HTTPS para tu dominio (Caddy, Traefik,
-  Cloudflare Tunnel, Tailscale Serve…) con `RP_ID` y `ORIGIN` de ese dominio en `.env`.
-  Ver `.env.example` para el resto de opciones (invitaciones, contraseñas…).
-- **Desde el código:** `make images` construye las imágenes y arranca con ellas.
+- **From a phone on your home network:** `docker compose --profile https up -d` adds HTTPS with a
+  self-signed certificate on port 8443. Set `ORIGIN=https://<ip>:8443` and `RP_ID=<ip>` in `.env`,
+  and accept the certificate warning on the phone. Passkeys don't work with such a certificate:
+  sign in with a password.
+- **Real deployment:** behind an HTTPS proxy for your domain (Caddy, Traefik, Cloudflare Tunnel,
+  Tailscale Serve…) with `RP_ID` and `ORIGIN` for that domain in `.env`. See `.env.example` for
+  the other options (invite codes, passwords…).
+- **From source:** `make images` builds the images and starts with them.
 
-## Desarrollo (`make`)
+## Development (`make`)
 
 ```bash
-make install    # dependencias (npm, uv) y modelos (git lfs pull)
-make dev        # api :3000 + visión :8001 + frontend http://localhost:5173 (datos en .dev-data/)
-make            # lista todas las tareas
+make install    # dependencies (npm, uv) and models (git lfs pull)
+make dev        # api :3000 + vision :8001 + frontend http://localhost:5173 (data in .dev-data/)
+make            # lists every task
 ```
 
-## Entrenar el detector de zonas
+## Training the zone detector
 
-Con `FLOSSY_SERVER` en `local.mk` (no va a git) y una clave de API de administrador en
-`~/.flossy-key`:
+With `FLOSSY_SERVER` in `local.mk` (not committed) and an admin API key in `~/.flossy-key`:
 
 ```bash
-make train      # baja las grabaciones nuevas del servidor y reentrena -> vision/models/zones.joblib
-make analyze    # resumen por zona de las grabaciones locales
-make lab        # laboratorio de grabación del prototipo: https://<ip>:8443 en el móvil
+make train      # downloads new recordings from the server and retrains -> vision/models/zones.joblib
+make analyze    # per-zone summary of the local recordings
+make lab        # the prototype's recording lab: https://<ip>:8443 on the phone
 ```
 
-Los modelos (`vision/models/*.task`, `zones.joblib`) van en git LFS y dentro de la imagen de
-visión: tras reentrenar, haz commit de `zones.joblib` y CI publica una imagen nueva. En local, la
-app recarga `zones.joblib` sola al empezar la siguiente sesión.
+The models (`vision/models/*.task`, `zones.joblib`) are stored in git LFS and baked into the
+vision image: after retraining, commit `zones.joblib` and CI publishes a new image. Locally, the
+app reloads `zones.joblib` by itself when the next session starts.
 
-## Licencia
+## License
 
-AGPL-3.0-or-later. Incluye código adaptado de openGym (© Duarte Santos, AGPL-3.0):
-`api/password.js`, `api/rate-limit.js`, `api/durable.js`, `api/verify-error.js`, la autenticación de
-`api/server.js`, y en el frontend `index.css`, `components/{Icon,ui,Modals,Toast}.jsx`,
-`lib/{use-sheet-keyboard,native-keyboard,viewport-guard}.js` y la estructura de `views/Login.jsx`.
+AGPL-3.0-or-later. Includes code adapted from openGym (© Duarte Santos, AGPL-3.0):
+`api/password.js`, `api/rate-limit.js`, `api/durable.js`, `api/verify-error.js`, the
+authentication in `api/server.js`, and in the frontend `index.css`,
+`components/{Icon,ui,Modals,Toast}.jsx`, `lib/{use-sheet-keyboard,native-keyboard,viewport-guard}.js`
+and the structure of `views/Login.jsx`.
