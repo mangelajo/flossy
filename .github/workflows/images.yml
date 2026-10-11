@@ -86,7 +86,7 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.name }}
       - name: Run smoke test (vision)
         if: matrix.name == 'vision'
-        run: docker run --rm flossy-vision:smoke python -c "import flossy_vision as fv, coach; fv.Landmarkers(); assert coach.ZoneModel().ready; print('ok')"
+        run: docker run --rm flossy-vision:smoke python -c "import app, flossy_vision as fv; fv.Landmarkers(); assert app.zone_model.ready; print('ok')"
 
       - uses: docker/build-push-action@v6
         with:

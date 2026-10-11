@@ -20,7 +20,6 @@ import socket
 import subprocess
 import threading
 import time
-from datetime import datetime
 from pathlib import Path
 
 import cv2
@@ -31,7 +30,8 @@ from fastapi.responses import FileResponse
 
 import flossy_vision as fv
 from coach import GuidedSession, ZoneModel
-from protocol import PROTOCOLS, Guide
+from protocol import PROTOCOLS
+from recorder import Recorder, geometry
 
 HERE = Path(__file__).parent
 RECORDINGS = HERE / "data" / "recordings"
@@ -67,38 +67,6 @@ async def upload_video(rec_id: str, request: Request, offset_ms: float = 0):
     return {"ok": True, "bytes": len(body)}
 
 
-class Recorder:
-    """Guarda cada fotograma etiquetado: frames.jsonl (+ img/NNNNN.jpg si save_images)."""
-
-    def __init__(self, protocol, save_images, who):
-        self.guide = Guide(protocol)
-        self.save_images = save_images
-        stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-        self.id = f"{stamp}_{who or 'anon'}_{protocol}"
-        self.dir = RECORDINGS / self.id
-        (self.dir / "img").mkdir(parents=True, exist_ok=True)
-        (self.dir / "meta.json").write_text(json.dumps({
-            "id": self.id, "protocol": protocol, "who": who, "started": stamp, "save_images": save_images,
-            "steps": self.guide.steps}, ensure_ascii=False, indent=1))
-        self.log = open(self.dir / "frames.jsonl", "w")
-        self.t0 = None
-        self.n = 0
-
-    def label(self, t):
-        if self.t0 is None:
-            self.t0 = t
-        return self.guide.at(t - self.t0)
-
-    def write(self, t, label, jpeg, record):
-        if self.save_images:
-            (self.dir / "img" / f"{self.n:05d}.jpg").write_bytes(jpeg)
-        self.log.write(json.dumps({"i": self.n, "t": round(t - self.t0, 3), "label": label, **record}) + "\n")
-        self.n += 1
-
-    def close(self):
-        self.log.close()
-
-
 class Stream:
     def __init__(self):
         self.lms = fv.Landmarkers()
@@ -129,13 +97,13 @@ class Stream:
             guide = self.recorder.label(ts / 1000)
             if guide is None:
                 guide = {"done": True, "id": self.recorder.id, "frames": self.recorder.n}
-                self.recorder.close()
+                self.recorder.close(complete=True)
                 self.recorder = None
             else:
                 guide["id"] = self.recorder.id
                 self.recorder.write(ts / 1000, guide, jpeg, {
                     "size": [w, h], "pred": {"state": state, "zone": zone}, "feats": feats, "raw": raw,
-                    "geom": self.geometry(mouth, hands, brushes)})
+                    "geom": geometry(mouth, hands, brushes)})
 
         coach = self.coach.update(ts / 1000, state, raw, (w, h)) if self.coach else None
 
@@ -155,23 +123,10 @@ class Stream:
         }
 
 
-    @staticmethod
-    def geometry(mouth, hands, brushes):
-        """Posiciones en coordenadas de la cara (anchos de boca), lo útil para separar zonas."""
-        if mouth is None:
-            return None
-        ff = lambda p: fv.to_face_frame(np.asarray(p, float), mouth).round(3).tolist()
-        return {
-            "mouth_w": round(mouth["width"], 1),
-            "hands": [{"tips": [ff(hp[i]) for i in fv.FINGERTIPS], "wrist": ff(hp[0])} for hp in hands],
-            "brushes": [{"c": ff([(b[0] + b[2]) / 2, (b[1] + b[3]) / 2]), "p1": ff(b[:2]), "p2": ff(b[2:]),
-                         "conf": round(c, 2)} for b, c in brushes],
-        }
-
     def start_recording(self, protocol, save_images, who):
         if self.recorder:
             self.recorder.close()
-        self.recorder = Recorder(protocol, save_images, who)
+        self.recorder = Recorder(RECORDINGS, protocol, save_images, who)
         self.tracker = fv.SessionTracker()
 
     def stop_recording(self):
@@ -195,8 +150,7 @@ async def ws(websocket: WebSocket):
                 if cmd.get("type") == "reset":
                     stream.tracker = fv.SessionTracker()
                 elif cmd.get("type") == "record_start" and cmd.get("protocol") in PROTOCOLS:
-                    who = "".join(ch for ch in str(cmd.get("who", ""))[:20] if ch.isalnum())
-                    stream.start_recording(cmd["protocol"], bool(cmd.get("save_images")), who)
+                    stream.start_recording(cmd["protocol"], bool(cmd.get("save_images")), cmd.get("who", ""))
                 elif cmd.get("type") == "record_stop":
                     stream.stop_recording()
                 elif cmd.get("type") == "guided_start":

@@ -66,6 +66,8 @@ function saveDb() {
 const isAdmin = u => !!u && (u.admin === true || ADMIN_UIDS.includes(u.id));
 const publicUser = u => ({
   id: u.id, name: u.name, admin: isAdmin(u), created: u.created, tz: u.tz || null,
+  // Puede hacer grabaciones de entrenamiento (vídeo de la cara): admins y perfiles con permiso.
+  recorder: isAdmin(u) || !!u.recorder,
   guardians: (u.guardians || []).map(g => db.users.find(x => x.id === g)?.name).filter(Boolean),
   children: childrenOf(u).length
 });
@@ -596,6 +598,16 @@ const routes = {
                  passkeys: db.creds.filter(c => c.userId === u.id).length, password: hasPassword(u) };
       })
     });
+  },
+
+  'PATCH /api/admin/users/{id}': async (req, res, id) => {
+    if (!requireAdmin(req, res)) return;
+    const target = userById(id);
+    if (!target) return json(res, 404, { error: 'no existe' });
+    const body = await readBody(req);
+    if (typeof body.recorder === 'boolean') target.recorder = body.recorder;
+    saveDb();
+    json(res, 200, { user: publicUser(target) });
   },
 
   'GET /api/admin/invites': async (req, res) => {

@@ -13,7 +13,7 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev --no-install-project
 COPY models/*.joblib ./models/
-COPY flossy_vision.py coach.py zones.py app.py ./
+COPY *.py ./
 ENV FLOSSY_MODELS=/app/models DATA_DIR=/data PATH="/app/.venv/bin:$PATH"
 EXPOSE 8000
 HEALTHCHECK --interval=5m --timeout=5s CMD wget --spider -q "http://127.0.0.1:8000/ws/health" || exit 1

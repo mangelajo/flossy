@@ -12,6 +12,7 @@ import History from './views/History.jsx'
 import Settings from './views/Settings.jsx'
 import Schedule from './views/Schedule.jsx'
 import Family, { FamilyChild } from './views/Family.jsx'
+import Record, { Recordings } from './views/Record.jsx'
 
 function Shell() {
   const { ready, user } = useAuth()
@@ -37,6 +38,8 @@ function Shell() {
             <Route path="/schedule/:id" element={<Schedule />} />
             <Route path="/family" element={<Family />} />
             <Route path="/family/:id" element={<FamilyChild />} />
+            <Route path="/record" element={<Record />} />
+            <Route path="/recordings" element={<Recordings />} />
             <Route path="*" element={<Navigate to="/home" replace />} />
           </Routes>
         )}

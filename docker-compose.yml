@@ -19,8 +19,10 @@ services:
     env_file: .env
     environment:
       - DATA_DIR=/data
+      - RECORDINGS_DIR=/recordings
     volumes:
       - ./data:/data:ro           # solo para verificar la cookie de sesión
+      - ./recordings:/recordings  # grabaciones para entrenar (Ajustes → Grabaciones)
     # Cada sesión activa usa ~1 núcleo a ~10 fps. Ajusta según tu máquina.
     deploy:
       resources:

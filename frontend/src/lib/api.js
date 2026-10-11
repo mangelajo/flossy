@@ -98,3 +98,9 @@ export const unlinkChild = id => api(`/api/family/children/${enc(id)}`, { method
 export const listKeys = async () => (await api('/api/keys')).keys
 export const createKey = name => post('/api/keys', { name })
 export const deleteKey = id => api(`/api/keys/${enc(id)}`, { method: 'DELETE' })
+
+// Grabaciones para entrenar (servicio de visión; solo administradores).
+export const listRecordings = async () => (await api('/ws/recordings')).recordings
+export const deleteRecording = id => api(`/ws/recordings/${enc(id)}`, { method: 'DELETE' })
+export const recordingUrl = id => `/ws/recordings/${enc(id)}.tar`
+export const setRecorder = async (id, recorder) => (await api(`/api/admin/users/${enc(id)}`, { method: 'PATCH', body: JSON.stringify({ recorder }) })).user

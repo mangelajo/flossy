@@ -50,6 +50,25 @@ curl -H "X-API-Key: flossy_…"            https://flossy.example.com/api/v1/sta
 Assistant: un sensor REST con `value_template: "{{ value_json.ok }}"` y una automatización que
 apague la tele cuando pase a `false`.
 
+## Grabaciones para entrenar
+
+Desde la app (Ajustes → Grabar para entrenar) se graba siguiendo un protocolo: la app dice en voz
+alta qué zona hacer y el servidor guarda cada fotograma etiquetado en `RECORDINGS_DIR` (volumen
+`recordings/`), con el mismo formato que el laboratorio. Pueden grabar los administradores y los
+perfiles a los que un administrador se lo active (Ajustes → Grabaciones).
+
+Para entrenar en local, con una clave de API de un administrador:
+
+```bash
+cd vision
+FLOSSY_KEY=flossy_… uv run fetch_recordings.py https://flossy.example.com   # baja las nuevas a data/recordings/
+uv run analyze.py        # revisarlas
+uv run zones.py          # reentrenar -> models/zones.joblib; commit + push y CI publica la imagen
+```
+
+API (solo administradores, cookie o `Authorization: Bearer <clave>`): `GET /ws/recordings` (lista),
+`GET /ws/recordings/{id}.tar` (descarga), `DELETE /ws/recordings/{id}`.
+
 ## Requisitos del servidor
 
 **No hace falta GPU.** Todo corre en CPU:

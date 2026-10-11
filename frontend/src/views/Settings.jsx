@@ -103,6 +103,11 @@ export default function Settings() {
           accessory="chevron" onClick={() => useUI.getState().openSheet(() => <CodeSheet title="Código para un tutor" />)} />
         <Row icon="house" title="Familia" subtitle="Los niños de los que eres tutor" accessory="chevron" onClick={() => nav('/family')} />
       </Section>
+      {user.recorder && <Section title="Entrenamiento"
+        footer="Grabaciones guiadas zona a zona para mejorar la detección. Se guardan en el servidor.">
+        <Row icon="camera" title="Grabar para entrenar" accessory="chevron" onClick={() => nav('/record')} />
+        {user.admin && <Row icon="download" title="Grabaciones" subtitle="Descargar, borrar y quién puede grabar" accessory="chevron" onClick={() => nav('/recordings')} />}
+      </Section>}
       <ApiKeys />
       {user.admin && <Admin />}
       <div className="dim small" style={{ textAlign: 'center', marginTop: 20 }}>

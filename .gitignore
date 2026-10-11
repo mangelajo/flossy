@@ -12,3 +12,4 @@ data/
 frontend/dist/
 node_modules/
 *.swp
+recordings/
