@@ -1,40 +1,67 @@
+# flossy con las imágenes ya publicadas (ghcr.io), sin compilar nada:
+#
+#   docker compose up -d          # http://localhost:8080 en esta máquina
+#
+# Configuración opcional en .env (ver .env.example). Para construir las imágenes desde el
+# código: make images (añade docker-compose.build.yml). Para probar desde el móvil en la red de
+# casa con HTTPS autofirmado: perfil "https" (ver README).
 name: flossy
 
-services:
-  # Cuentas (passkeys + contraseña) y sesiones guardadas. Node, sin framework.
-  api:
-    build: ./api
-    restart: unless-stopped
-    env_file: .env
-    environment:
-      - DATA_DIR=/data
-      - TRUST_PROXY=1
-    volumes:
-      - ./data:/data              # usuarios, passkeys, sesiones, secreto: HAZ COPIA DE ESTO
+x-env: &env
+  RP_ID: ${RP_ID:-localhost}
+  ORIGIN: ${ORIGIN:-http://localhost:8080}
+  RP_NAME: ${RP_NAME:-flossy}
+  INVITE_ONLY: ${INVITE_ONLY:-}
+  PASSWORD_LOGIN: ${PASSWORD_LOGIN:-}
+  SESSION_DAYS: ${SESSION_DAYS:-}
+  ADMIN_UIDS: ${ADMIN_UIDS:-}
+  DATA_DIR: /data
 
-  # Detección en tiempo real (MediaPipe + clasificador de zonas). Solo CPU.
-  vision:
-    build: ./vision
+services:
+  # Cuentas (passkeys + contraseña), sesiones, horarios, familia. Node, sin framework.
+  api:
+    image: ghcr.io/mangelajo/flossy-api:${FLOSSY_TAG:-latest}
     restart: unless-stopped
-    env_file: .env
     environment:
-      - DATA_DIR=/data
-      - RECORDINGS_DIR=/recordings
+      <<: *env
+      TRUST_PROXY: "1"
     volumes:
-      - ./data:/data:ro           # solo para verificar la cookie de sesión
-      - ./recordings:/recordings  # grabaciones para entrenar (Ajustes → Grabaciones)
-    # Cada sesión activa usa ~1 núcleo a ~10 fps. Ajusta según tu máquina.
+      - ./data:/data:z              # usuarios, passkeys, sesiones, secreto: HAZ COPIA DE ESTO
+
+  # Detección en tiempo real (MediaPipe + clasificador de zonas, modelos en la imagen). Solo CPU.
+  vision:
+    image: ghcr.io/mangelajo/flossy-vision:${FLOSSY_TAG:-latest}
+    restart: unless-stopped
+    environment:
+      <<: *env
+      RECORDINGS_DIR: /recordings
+    volumes:
+      - ./data:/data:ro,z           # solo para verificar la cookie de sesión
+      - ./recordings:/recordings:z  # grabaciones para entrenar (Ajustes → Grabaciones)
+    # Cada sesión activa usa ~0,5-1 núcleo. Ajusta según tu máquina.
     deploy:
       resources:
         limits:
           cpus: "6"
           memory: 3g
 
+  # nginx: sirve la app y reenvía /api y /ws en el mismo origen.
   web:
-    build:
-      context: .
-      dockerfile: web/Dockerfile
+    image: ghcr.io/mangelajo/flossy-web:${FLOSSY_TAG:-latest}
     restart: unless-stopped
     depends_on: [api, vision]
     ports:
       - "${WEB_PORT:-8080}:8080"
+
+  # Opcional (docker compose --profile https up -d): HTTPS con un certificado autofirmado para
+  # probar desde el móvil en la red de casa. El navegador avisa del certificado; las passkeys no
+  # funcionan así (usa contraseña). Pon en .env ORIGIN=https://<ip-o-nombre>:8443 y RP_ID=<ip-o-nombre>.
+  https:
+    image: caddy:2-alpine
+    profiles: [https]
+    restart: unless-stopped
+    depends_on: [web]
+    volumes:
+      - ./web/Caddyfile:/etc/caddy/Caddyfile:ro,z
+    ports:
+      - "${HTTPS_PORT:-8443}:8443"

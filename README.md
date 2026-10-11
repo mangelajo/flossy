@@ -57,7 +57,8 @@ alta qué zona hacer y el servidor guarda cada fotograma etiquetado en `RECORDIN
 `recordings/`), con el mismo formato que el laboratorio. Pueden grabar los administradores y los
 perfiles a los que un administrador se lo active (Ajustes → Grabaciones).
 
-Para entrenar en local, con una clave de API de un administrador:
+Para entrenar en local (o simplemente `make train`, ver más abajo), con una clave de API de un
+administrador:
 
 ```bash
 cd vision
@@ -87,29 +88,44 @@ YOLO (detector del cepillo) queda fuera de la imagen de producción: casi nunca 
 (lo tapa la mano) y costaba otros ~40 ms por fotograma y ~2 GB de PyTorch. Sigue disponible en el
 laboratorio.
 
-## Desplegar con Docker
+## Probarlo con Docker
+
+Con las imágenes ya publicadas en ghcr.io, sin compilar nada ni configurar nada:
 
 ```bash
-cp .env.example .env              # ajusta RP_ID y ORIGIN a tu dominio HTTPS
-docker compose up -d --build      # http://localhost:8080 (o tu dominio)
+curl -O https://raw.githubusercontent.com/mangelajo/flossy/main/docker-compose.yml
+docker compose up -d              # http://localhost:8080 en esta misma máquina
 ```
 
-El primer perfil que se crea es administrador. Haz copia de seguridad de `data/`.
+El primer perfil que se crea es administrador. Los datos quedan en `data/` (haz copia) y las
+grabaciones para entrenar en `recordings/`. Funciona igual con Podman (`podman compose`).
 
-## Desarrollo
+- **Desde el móvil en la red de casa:** `docker compose --profile https up -d` añade HTTPS con un
+  certificado autofirmado en el puerto 8443. Pon en `.env` `ORIGIN=https://<ip>:8443` y
+  `RP_ID=<ip>`, y acepta el aviso del certificado en el móvil. Las passkeys no funcionan con un
+  certificado así: entra con contraseña.
+- **Despliegue de verdad:** detrás de un proxy con HTTPS para tu dominio (Caddy, Traefik,
+  Cloudflare Tunnel, Tailscale Serve…) con `RP_ID` y `ORIGIN` de ese dominio en `.env`.
+  Ver `.env.example` para el resto de opciones (invitaciones, contraseñas…).
+- **Desde el código:** `make images` construye las imágenes y arranca con ellas.
+
+## Desarrollo (`make`)
 
 ```bash
-cd api && npm install && npm run dev                                   # :3000, datos en .dev-data/
-cd vision && DATA_DIR=../.dev-data uv run uvicorn app:app --port 8001  # :8001
-cd frontend && npm install && npm run dev                              # http://localhost:5173
+make install    # dependencias (npm, uv) y modelos (git lfs pull)
+make dev        # api :3000 + visión :8001 + frontend http://localhost:5173 (datos en .dev-data/)
+make            # lista todas las tareas
 ```
 
-## Laboratorio de detección (`vision/`)
+## Entrenar el detector de zonas
+
+Con `FLOSSY_SERVER` en `local.mk` (no va a git) y una clave de API de administrador en
+`~/.flossy-key`:
 
 ```bash
-uv run server.py --https          # prototipo + grabación guiada: https://<ip>:8443 en el móvil
-uv run analyze.py [id] [--replay] # resumen por zona de las grabaciones (data/recordings/)
-uv run zones.py                   # evalúa y reentrena el clasificador -> models/zones.joblib
+make train      # baja las grabaciones nuevas del servidor y reentrena -> vision/models/zones.joblib
+make analyze    # resumen por zona de las grabaciones locales
+make lab        # laboratorio de grabación del prototipo: https://<ip>:8443 en el móvil
 ```
 
 Los modelos (`vision/models/*.task`, `zones.joblib`) van en git LFS y dentro de la imagen de

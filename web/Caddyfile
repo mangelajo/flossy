@@ -1,0 +1,14 @@
+# HTTPS autofirmado para probar flossy desde el móvil en la red de casa (perfil "https" de
+# docker-compose.yml). Emite al vuelo un certificado de su CA interna para el nombre o la IP con
+# que se conecte el navegador: hay que aceptar el aviso del certificado.
+{
+	local_certs
+	skip_install_trust
+}
+
+https://:8443 {
+	tls internal {
+		on_demand
+	}
+	reverse_proxy web:8080
+}

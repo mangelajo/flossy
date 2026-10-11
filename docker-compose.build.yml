@@ -1,0 +1,15 @@
+# Construye las imágenes desde el código en vez de bajarlas de ghcr.io:
+#   docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build   (= make images up)
+# Los modelos de vision/models van en git LFS: haz `git lfs pull` antes.
+services:
+  api:
+    image: flossy-api:dev
+    build: ./api
+  vision:
+    image: flossy-vision:dev
+    build: ./vision
+  web:
+    image: flossy-web:dev
+    build:
+      context: .
+      dockerfile: web/Dockerfile
